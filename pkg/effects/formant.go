@@ -63,7 +63,7 @@ type cepstralFormant struct {
 
 func newFormant(sampleRate int, params map[string]any) (Node, error) {
 	shift := getFloat(params, "shift", 1.0)
-	if shift <= 0 {
+	if math.IsNaN(shift) || shift <= 0 {
 		return nil, fmt.Errorf("effects: formant: shift must be > 0, got %v", shift)
 	}
 	frameSize := getInt(params, "frameSize", 2048)
@@ -75,7 +75,7 @@ func newFormant(sampleRate int, params map[string]any) (Node, error) {
 		return nil, fmt.Errorf("effects: formant: hops must be in [1, frameSize] and divide frameSize, got %d", hops)
 	}
 	lifter := getFloat(params, "lifter", 0.2)
-	if lifter < 0 || lifter > 1 {
+	if math.IsNaN(lifter) || lifter < 0 || lifter > 1 {
 		return nil, fmt.Errorf("effects: formant: lifter must be in [0, 1], got %v", lifter)
 	}
 
@@ -111,6 +111,11 @@ func newFormant(sampleRate int, params map[string]any) (Node, error) {
 		}
 		if s > 1e-12 {
 			e.invNormPhase[i] = 1.0 / s
+		} else {
+			// No overlapping frame covers this phase (e.g. hops=1, where the
+			// symmetric Hann endpoints win[0] and win[N-1] are zero). Leave the
+			// sample untouched instead of scaling it to zero.
+			e.invNormPhase[i] = 1.0
 		}
 	}
 

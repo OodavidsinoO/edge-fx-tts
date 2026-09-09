@@ -273,3 +273,24 @@ func TestFormantZeroAllocs(t *testing.T) {
 	n := buildNode(t, "formant", map[string]any{"shift": 1.1, "frameSize": 512})
 	assertZeroAllocs(t, n, stereoFrames(4096))
 }
+
+func TestFormantHopsOneNoZeroSamples(t *testing.T) {
+	// With hops=1 (no overlap) the symmetric Hann endpoints are zero, which
+	// used to scale the first/last sample of every output frame to zero. The
+	// OLA normalization must fall back to identity for uncovered phases.
+	n := buildNode(t, "formant", map[string]any{"shift": 1.2, "hops": 1, "frameSize": 512})
+	buf := stereoFrames(4096)
+	for i := range buf {
+		buf[i] = float32(i%3+1) * 0.1
+	}
+	if err := n.ProcessInPlace(buf); err != nil {
+		t.Fatal(err)
+	}
+	// No output sample in the steady-state middle may be exactly zero from
+	// the scaling bug; nonzero input must yield nonzero output.
+	for i := len(buf) / 2; i < len(buf); i++ {
+		if buf[i] == 0 {
+			t.Fatalf("output sample %d is zero after hops=1 formant shift", i)
+		}
+	}
+}

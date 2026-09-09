@@ -54,17 +54,17 @@ func newPitchCorrector(sampleRate int, params map[string]any) (Node, error) {
 	}
 
 	amount := getFloat(params, "amount", 1)
-	if amount < 0 || amount > 1 {
+	if math.IsNaN(amount) || amount < 0 || amount > 1 {
 		return nil, fmt.Errorf("effects: pitchcorrector: amount must be in [0, 1], got %v", amount)
 	}
 
 	speedMs := getFloat(params, "speedMs", 20)
-	if speedMs < 0 {
+	if math.IsNaN(speedMs) || speedMs < 0 {
 		return nil, fmt.Errorf("effects: pitchcorrector: speedMs must be >= 0, got %v", speedMs)
 	}
 
 	confidence := getFloat(params, "confidence", 0.5)
-	if confidence < 0 || confidence > 1 {
+	if math.IsNaN(confidence) || confidence < 0 || confidence > 1 {
 		return nil, fmt.Errorf("effects: pitchcorrector: confidence must be in [0, 1], got %v", confidence)
 	}
 
