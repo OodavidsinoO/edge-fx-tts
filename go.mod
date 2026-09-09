@@ -8,3 +8,5 @@ require (
 )
 
 require golang.org/x/net v0.53.0
+
+require github.com/tosone/minimp3 v1.0.2 // indirect

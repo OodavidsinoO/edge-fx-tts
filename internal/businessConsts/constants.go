@@ -12,7 +12,7 @@ var (
 	EdgeWssEndpoint   = fmt.Sprintf("wss://%s/edge/v1?TrustedClientToken=%s", BaseUrl, TrustedClientToken)
 	VoiceListEndpoint = fmt.Sprintf("https://%s/voices/list?trustedclienttoken=%s", BaseUrl, TrustedClientToken)
 
-	ChromiumFllVersion   = "130.0.2849.68"
+	ChromiumFllVersion   = "143.0.3650.75"
 	ChromiumMajorVersion = strings.Split(ChromiumFllVersion, ".")[0]
 )
 
