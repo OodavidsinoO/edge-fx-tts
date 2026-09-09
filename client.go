@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lib-x/edgetts/internal/communicate"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/communicate"
 )
 
 // Client synthesizes text and SSML to audio.

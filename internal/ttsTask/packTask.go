@@ -2,8 +2,8 @@ package ttsTask
 
 import (
 	"encoding/json"
-	"github.com/lib-x/edgetts/internal/communicate"
-	"github.com/lib-x/edgetts/internal/communicateOption"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/communicate"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/communicateOption"
 	"io"
 	"log"
 	"sync"

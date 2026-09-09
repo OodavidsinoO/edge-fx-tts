@@ -1,7 +1,7 @@
 package ttsTask
 
 import (
-	"github.com/lib-x/edgetts/internal/communicate"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/communicate"
 	"io"
 	"sync"
 )

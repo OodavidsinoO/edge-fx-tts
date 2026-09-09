@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lib-x/edgetts"
+	"github.com/OodavidsinoO/edge-fx-tts"
 )
 
 func main() {

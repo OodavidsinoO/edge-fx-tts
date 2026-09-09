@@ -4,7 +4,7 @@ import (
 	"errors"
 	"regexp"
 
-	"github.com/lib-x/edgetts/internal/communicateOption"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/communicateOption"
 )
 
 var (

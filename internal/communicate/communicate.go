@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"github.com/lib-x/edgetts/internal/businessConsts"
-	"github.com/lib-x/edgetts/internal/communicateOption"
-	"github.com/lib-x/edgetts/internal/validate"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/businessConsts"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/communicateOption"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/validate"
 )
 
 const (

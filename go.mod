@@ -1,4 +1,4 @@
-module github.com/lib-x/edgetts
+module github.com/OodavidsinoO/edge-fx-tts
 
 go 1.25.0
 

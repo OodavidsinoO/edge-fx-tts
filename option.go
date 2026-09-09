@@ -1,6 +1,6 @@
 package edgetts
 
-import "github.com/lib-x/edgetts/internal/communicateOption"
+import "github.com/OodavidsinoO/edge-fx-tts/internal/communicateOption"
 
 type option struct {
 	Voice                 string

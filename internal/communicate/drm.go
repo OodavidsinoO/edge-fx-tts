@@ -3,7 +3,7 @@ package communicate
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/lib-x/edgetts/internal/businessConsts"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/businessConsts"
 	"time"
 )
 

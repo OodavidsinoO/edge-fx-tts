@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/lib-x/edgetts"
+	"github.com/OodavidsinoO/edge-fx-tts"
 )
 
 func ExampleSave() {

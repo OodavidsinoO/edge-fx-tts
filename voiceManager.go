@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/lib-x/edgetts/internal/businessConsts"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/businessConsts"
 )
 
 var (
