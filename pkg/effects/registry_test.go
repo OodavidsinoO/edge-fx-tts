@@ -7,7 +7,7 @@ import (
 )
 
 func TestAllCoreEffectsRegistered(t *testing.T) {
-	for _, name := range []string{"upmix", "fdnreverb", "chorus", "delay", "compressor", "deesser", "eq", "limiter"} {
+	for _, name := range []string{"upmix", "fdnreverb", "chorus", "delay", "compressor", "deesser", "eq", "limiter", "flanger", "gate", "wsola"} {
 		if _, ok := registry[name]; !ok {
 			t.Errorf("effect %q not registered", name)
 		}

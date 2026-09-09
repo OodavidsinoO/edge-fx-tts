@@ -1,0 +1,20 @@
+version: 1
+sampleRate: 24000
+channels: 2
+chunkSamples: 4096
+stages:
+  - name: upmix
+    params: { mode: center }
+  - name: eq
+    params: { type: highpass, freq: 300, q: 0.707 }
+  - name: eq
+    params: { type: lowpass, freq: 3400, q: 0.707 }
+  - name: eq
+    params: { type: peaking, freq: 1000, gain: 1, q: 0.707 }
+  - name: compressor
+    params: { threshold: -22, ratio: 5, attack: 5, release: 120 }
+  - name: limiter
+    params: { threshold: -1, release: 100 }
+output:
+  format: wav
+  bitDepth: 16

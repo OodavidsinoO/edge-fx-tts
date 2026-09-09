@@ -1,0 +1,32 @@
+version: 1
+sampleRate: 24000
+channels: 2
+chunkSamples: 4096
+stages:
+  - name: upmix
+    params: { mode: center }
+  - name: pitchcorrector
+    params: { mode: chromatic, amount: 1, speedMs: 0 }
+  - name: formant
+    params: { shift: 1.8 }
+  - name: wsola
+    params: { semitones: -1 }
+  - name: flanger
+    params: { rateHz: 0.4, depth: 0.008, mix: 0.25 }
+  - name: chorus
+    params: { baseDelay: 0.025, depth: 0.001, speedHz: 1.0, stages: 3, mix: 0.3 }
+  - name: eq
+    params: { type: highpass, freq: 300, q: 0.707 }
+  - name: eq
+    params: { type: lowpass, freq: 3400, q: 0.707 }
+  - name: fdnreverb
+    params: { rt60: 0.5, damp: 0.6, preDelay: 0.05, wet: 0.2, dry: 1.0 }
+  - name: compressor
+    params: { threshold: -24, ratio: 3.5, attack: 15, release: 120 }
+  - name: deesser
+    params: {}
+  - name: limiter
+    params: { threshold: -1, release: 100 }
+output:
+  format: wav
+  bitDepth: 16

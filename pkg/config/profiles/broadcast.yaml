@@ -1,0 +1,32 @@
+version: 1
+sampleRate: 24000
+channels: 2
+chunkSamples: 4096
+stages:
+  - name: upmix
+    params: { mode: center }
+  - name: eq
+    params: { type: highpass, freq: 85, q: 0.707 }
+  - name: eq
+    params: { type: peaking, freq: 250, gain: 1.5, q: 0.707 }
+  - name: eq
+    params: { type: peaking, freq: 800, gain: -1.5, q: 4 }
+  - name: eq
+    params: { type: peaking, freq: 3000, gain: 2.5, q: 0.707 }
+  - name: eq
+    params: { type: peaking, freq: 5500, gain: 1.5, q: 0.707 }
+  - name: eq
+    params: { type: lowpass, freq: 7000, q: 0.707 }
+  - name: eq
+    params: { type: peaking, freq: 7000, gain: -1.5, q: 4 }
+  - name: deesser
+    params: {}
+  - name: compressor
+    params: { threshold: -22, ratio: 3, attack: 15, release: 120 }
+  - name: fdnreverb
+    params: { rt60: 0.25, damp: 0.7, wet: 0.15, dry: 1.0 }
+  - name: limiter
+    params: { threshold: -1, release: 100 }
+output:
+  format: wav
+  bitDepth: 16

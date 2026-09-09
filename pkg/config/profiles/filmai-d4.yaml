@@ -1,0 +1,20 @@
+version: 1
+sampleRate: 24000
+channels: 2
+chunkSamples: 4096
+stages:
+  - name: upmix
+    params: { mode: center }
+  - name: eq
+    params: { type: peaking, freq: 100, gain: 1.5, q: 0.707 }
+  - name: eq
+    params: { type: peaking, freq: 3000, gain: 2.5, q: 0.707 }
+  - name: compressor
+    params: { threshold: -28, ratio: 1.5, attack: 20, release: 150 }
+  - name: fdnreverb
+    params: { rt60: 0.2, wet: 0.15 }
+  - name: limiter
+    params: { threshold: -1, release: 100 }
+output:
+  format: wav
+  bitDepth: 16
