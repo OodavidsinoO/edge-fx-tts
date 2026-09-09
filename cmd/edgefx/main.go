@@ -22,7 +22,7 @@ import (
 )
 
 func main() {
-	if err := run(os.Args[1:], os.Stdout); err != nil {
+	if err := run(os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -30,7 +30,7 @@ func main() {
 // run parses flags, synthesizes via the TTS backend, and either passes the
 // MP3 stream through (profile none) or runs it through the effects pipeline
 // (any other profile). It is separated from main for testability.
-func run(args []string, _ io.Writer) error {
+func run(args []string) error {
 	fs := flag.NewFlagSet("edgefx", flag.ContinueOnError)
 	var (
 		profile = fs.String("profile", "none", "fx profile: none (passthrough) or a built-in preset")
@@ -100,10 +100,14 @@ func run(args []string, _ io.Writer) error {
 
 	sink, err := pipeline.NewWAVSink(out, spec.SampleRate, spec.Channels)
 	if err != nil {
+		_ = out.Close()
+		_ = os.Remove(*output)
 		return fmt.Errorf("wav sink: %w", err)
 	}
 	p, err := pipeline.New(reader, nodes, spec.SampleRate, spec.Channels, spec.ChunkSamples, sink)
 	if err != nil {
+		_ = out.Close()
+		_ = os.Remove(*output)
 		return fmt.Errorf("pipeline: %w", err)
 	}
 	return p.Run(ctx)
