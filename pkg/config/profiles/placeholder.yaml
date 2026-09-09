@@ -1,0 +1,12 @@
+version: 1
+sampleRate: 24000
+channels: 2
+chunkSamples: 4096
+stages:
+  - name: upmix
+    params: { mode: center }
+  - name: limiter
+    params: { ceiling: 0.95 }
+output:
+  format: wav
+  bitDepth: 16
