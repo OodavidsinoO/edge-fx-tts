@@ -3,8 +3,9 @@
 - **项目**：`github.com/OodavidsinoO/edge-fx-tts`（Go 模块，Go 1.25.0）
 - **日期**：2026-09-09
 - **性质**：研究与规划（无业务实现代码）
-- **方法**：4 个并行 web-search 调研 agent（DSP 选型与编解码 / 效果器参数 / 架构 / 风险可行性）+ 1 个追加调研 agent（电影 AI 人声与播音员声预设）+ 主线一手验证（go-mp3 issue #12、edge-tts 源码、tosone/minimp3 源码、本机工具链实测）；所有外部事实标注 `verified 2026-09-09` 与来源 URL
+- **方法**：4 个并行 web-search 调研 agent（DSP 选型与编解码 / 效果器参数 / 架构 / 风险可行性）+ 1 个追加调研 agent（电影 AI 人声与播音员声预设）+ 主线一手验证（go-mp3 issue #12、edge-tts 源码、tosone/minimp3 源码、algo-dsp pitch/dynamics/signal 包源码、本机工具链实测）；所有外部事实标注 `verified 2026-09-09` 与来源 URL
 - **文档读者**：后续进入实现对仓库起指导作用；被 `docs/agents/domain.md` 消费
+- **标注说明**：各库维护/活跃状态及具体日期取自仓库元数据/页面（个别推送日期未逐一手工复核者按 `[UNVERIFIED]` 计）；归档/停滞状态为主张、日期为次级证据；关键结论均有 URL 可复核
 
 ---
 
@@ -21,10 +22,10 @@
 | 采样率 | **配置可切换，默认 24k**；`sampleRate: 48000` 时链头自动插重采样 | 用户要求 | ✅ 已决策 |
 | V1 范围 | CLI：单句 + 批量文本 + 直通；库 API 仅 `pkg/` 核心生效 | 用户要求 | ✅ 已决策 |
 | 开源协议 | MIT（与全部依赖兼容） | 用户要求 | ✅ 已决策 |
-| **V1 自研（用户特批）** | **formant shifter + autotune 式逐音节音高量化** 两项缺口 V1 全做 | GLaDOS 式"一听就是 AI"需二者齐上 | ✅ 已决策（用户 C） |
+| **V1 自研（用户特批，核查后修正）** | **仅 formant shifter** 自研；音高量化**复用 algo-dsp PitchCorrector**（v0.6.0 已现成） | GLaDOS 式"一听就是 AI"；autotune 核心已非缺口 | ✅ 已决策（用户确认复用） |
 | 新预设 | 电影 AI / 播音员声（预设 D/E，含子变体）编入默认 profile 集 | 追加调研结果 | ✅ 已决策 |
 
-**总裁定**：本项目 **纯 Go 完全可行且是正确选择**——24kHz 单声道语音后处理负载极小（≈96 KB/s），Go 的 GC 停顿毫秒级且与堆大小弱相关（官方指南 + Twitch/Pusher/atdiar 实测证据），C++ 与 Go 的 2–10× 差距对此负载无意义（纯 Go libopus 实测仅 1.7–2.3×）；真正风险是**功能覆盖面**（编码器缺口、两个机器人声缺口）而非性能。唯一不可回避的成本：minimp3 引入 cgo（交叉编译需 C 工具链）。
+**总裁定**：本项目 **纯 Go 完全可行且是正确选择**——24kHz 单声道语音后处理负载极小（≈96 KB/s），Go 的 GC 停顿毫秒级且与堆大小弱相关（官方指南 + Twitch/Pusher/atdiar 实测证据），C++ 与 Go 的 2–10× 差距对此负载无意义（纯 Go libopus 实测仅 1.7–2.3×）；真正风险是**功能覆盖面**（编码器缺口、formant shifter 一项自研）而非性能。唯一不可回避的成本：minimp3 引入 cgo（交叉编译需 C 工具链）。
 
 ---
 
@@ -57,7 +58,7 @@ https://github.com/gopxl/beep · https://github.com/faiface/beep · https://gith
 
 ### 2.1 决定性事实：Edge 输出 = MPEG-2 Layer 3
 
-- 本仓库 `internal/communicate/communicate.go:177` 与 Python 参考实现 edge-tts `communicate.py:438` **均硬编码** `outputFormat: "audio-24khz-48kbitrate-mono-mp3"`（两个仓库源码均已读核实）。
+- 本仓库 `internal/communicate/communicate.go:177` 与 Python 参考实现 edge-tts `communicate.py:427` **均硬编码** `outputFormat: "audio-24khz-48kbitrate-mono-mp3"`（两个仓库源码均已读核实）。
 - edge-tts 的 `TTSConfig`（data_classes.py）**无格式字段**（已读核实）：24kHz 是标准库的固定输入。
 - 24kHz 只存在于 **MPEG-2 采样率族**（32000/44100/48000 为 MPEG-1）。
 - `hajimehoshi/go-mp3` 仅支持 MPEG-1：issue #12 原始报错 `mp3: only MPEG version 1 (want 3; got 2) is supported`；仓库 2023-04-02 已归档 read-only（页面横幅核实）。
@@ -293,7 +294,7 @@ https://go.dev/doc/gc-guide · https://go.dev/blog/greenteagc · https://go.dev/
 | 标杆 | 手法 | 对本项目 |
 | --- | --- | --- |
 | HAL 9000 | **纯表演+剪辑**：去呼吸=非人感核心；录音指示"even softer, in the depths" | 流式无剪辑期 → 需噪声门或接受"有呼吸的 AI" |
-| GLaDOS | Valve 官方管线：pitch constrained + modulation suppressed + **formant moved up**（Melodyne 还原：吸附最近半音→压平→formant 上调可一整个八度） | **真缺口：autotune 量化 + formant shifter 两项** |
+| GLaDOS | Valve 官方管线：pitch constrained + modulation suppressed + **formant moved up**（Melodyne 还原：吸附最近半音→压平→formant 上调可一整个八度） | 吸附量化 **algo-dsp PitchCorrector 现成（v0.6.0）**；缺口仅为 formant shifter |
 | Her（Samantha） | ADR 重配、breathy/nasal、音高起伏=拟人（不处理路线） | D4 微距 OS：几乎不处理 |
 | Ex Machina（Ava） | 非人感在动作层（陀螺仪/水晶碗/接触麦），人声几乎不处理 | 同上克制路线 |
 | 《攻壳机动队》 | 1995：扬声器悬吊 25L 素烧陶罐口下录反弹；Innocence：带盖 PVC 桶；2017 真人版 Kuze：Krotos Dehumaniser 2 + 抠字口吃 | **赛博空间人声 = 窄带 + 短促腔体回声**，全部 algo-dsp 现成 |
@@ -313,7 +314,7 @@ https://go.dev/doc/gc-guide · https://go.dev/blog/greenteagc · https://go.dev/
 | 6 压平 | ratio 3–4:1 / att 10–20 ms / rel 80–150 ms / GR 3–6 dB | ✅ Compressor(+sidechain) |
 | 7 齿音控制 | de-esser 阈值中档（窄带下 s/z 更突出） | ✅ de-esser |
 
-子变体：**D1 攻壳广播腔**（= 主链全开，基座）；**D2 GLaDOS 量化合成**（❌ 硬缺口：autotune 吸附最近半音 + formant 上移 → 见 6.3 决策）；**D3 HAL/TARS 冷静服务器嗓**（WSOLA −2~−3 st + 强压缩 4:1/att 5ms + FDN 0.4–0.8s；去呼吸 = ❌ 缺噪声门/剪辑期）；**D4 微距 OS**（近讲 80–120Hz +1~2dB、3k +2~3dB、轻柔压缩、FDN 0.15–0.3s，其余不处理）。
+子变体：**D1 攻壳广播腔**（= 主链全开，基座）；**D2 GLaDOS 量化合成**（✅ 吸附量化 = algo-dsp `PitchCorrector`：chromatic 贴半音 / Fixed 目标 / amount=1 / speedMs→0 量化态；缺 formant 上移 → V1 仅自研 formant，量化复用现成，用户已定）；**D3 HAL/TARS 冷静服务器嗓**（WSOLA −2~−3 st + 强压缩 4:1/att 5ms + FDN 0.4–0.8s；去呼吸 = ✅ algo-dsp 噪声门现成（gate.go）或接受"有呼吸的 AI"）；**D4 微距 OS**（近讲 80–120Hz +1~2dB、3k +2~3dB、轻柔压缩、FDN 0.15–0.3s，其余不处理）。
 
 ### 6.3 预设 E「播音员 / 电台广播声」（全部现成；唯一缺口是交付定标）
 
@@ -326,7 +327,7 @@ https://go.dev/doc/gc-guide · https://go.dev/blog/greenteagc · https://go.dev/
 | 齿音 | 6–8 kHz 窄带衰减 + de-esser |
 | 压缩 | 3–4:1 / att 10–20 ms / rel 80–150 ms / GR 3–6 dB |
 | 短混响 | FDN RT60 0.2–0.3 s 低电平 damp 高 |
-| 定标 | **−23.0 LUFS（±1.0 LU）/ 真峰值 ≤ −1 dBTP**（EBU R128 v5 官方 PDF 核实）——❌ LUFS 表缺失 → 离线测量补增益或链尾定标 |
+| 定标 | **−23.0 LUFS（±0.5 LU 常规；±1.0 LU 仅 live 节目）/ 真峰值 ≤ −1 dBTP**（EBU R128 v5 官方 PDF 核实）——❌ LUFS 表缺失 → 离线测量补增益或链尾定标 |
 
 子风格：**E1 播音员**（全频，压缩 3–4:1）；**E2 电台/DJ**（更密压缩 4–6:1 att 5–10ms GR 5–8dB、200–300Hz +3dB）；**E3 电话会议**（HP300+LP3400 带通 + bells、压缩 5:1 快攻）。
 
@@ -335,14 +336,14 @@ https://go.dev/doc/gc-guide · https://go.dev/blog/greenteagc · https://go.dev/
 | 缺口 | 说明 | 工作量（报告估算） | V1 处置（用户已定） |
 | --- | --- | --- | --- |
 | **formant shifter** | 源-滤波器解耦的共振峰搬移；algo-dsp 只有整体变调 | ~300 行（LPC 或倒谱域） | **V1 自研** |
-| **autotune 式逐音节音高量化** | 基频估计 + 逐音节贴半音 + 压平；Valve 管线核心 | 显著大（基频估计 + 贴调器） | **V1 自研**（与 formant 齐上；D2 才完整） |
-| vocoder 载波源 | algo-dsp 无噪声/振荡器发生器 | 小 | 预生成 WAV 嵌入或运行时生成 |
-| 噪声门 | HAL 式去呼吸 | 小 | 可选 v2 |
+| **autotune 式音高量化** | ~~原列硬缺口~~ 核查修正：algo-dsp v0.6.0 `dsp/effects/pitch` 已含 `PitchCorrector`（auto-tune 风格：chromatic/Fixed、amount、speedMs→0 量化态、confidence 门控）+ YINDetector + PitchTracker | — | **复用现成**（用户已定） |
+| vocoder 载波源 | ~~无发生器~~ 核查修正：`dsp/signal/generate.go` 现成（Sine/Multisine/Sweeps/WhiteNoise/PinkNoise）；剩余为载波驱动绑定 | 小 | 绑定集成 |
+| 噪声门（HAL 去呼吸） | ~~缺口~~ 核查修正：`dsp/effects/dynamics/gate.go`（soft-knee + hold）已现成 | — | 复用现成 |
 | LUFS/峰值表 | −23 LUFS 交付定标 | 中 | 离线测量补增益 |
 | 双段压缩 | 广播 1500–2500 Hz 分频 | 小（双路+分频组合） | v2 |
 | phase rotator | 限幅前波形对称化 | 小 | v2 低优先 |
 
-> **实现策略提示（供实现阶段细化，不推翻决策）**：autotune 量化（基频估计+逐音节贴调）复杂度显著高于 formant shifter；实现时可分层推进——先固定比值 + 强压缩近似（D3 级），再逐音节贴调、后量化收口，避免 V1 范围失控。报告仅作风险标注，V1 范围以决策为准。
+> **实现策略提示（供实现阶段细化，不推翻决策；依据 2026-09-09 事实核查修订）**：音高量化不再自研——复用 algo-dsp `PitchCorrector`（v0.6.0，`dsp/effects/pitch`，auto-tune 风格：chromatic 吸附/Fixed 目标、`amount`、`speedMs`→0 量化态、`WithCorrectionConfidence` 门控、block 2048/crossfade 5ms、内建 YINDetector+PitchTracker）。实现要点：GLaDOS 式"压平 pitch modulation"以 `speedMs→0` + `amount=1` 达成；逐音节贴调粒度由 `WithCorrectionBlockSize` 控制（更小块更贴音节、代价更多接缝）。**V1 唯一自研 = formant shifter**（~300 行 LPC/倒谱域）；其复杂度显著低于原估的双缺口方案，范围已收敛。
 
 ### 6.5 来源（节选）
 
