@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -33,7 +32,7 @@ func TestWriteReaderToFileRemovesPartialOnError(t *testing.T) {
 	path := filepath.Join(dir, "out.mp3")
 
 	// A reader that fails after emitting bytes.
-	errReader := errorReader{data: []byte("partial"), err: errors.New("boom")}
+	errReader := &errorReader{data: []byte("partial"), err: errors.New("boom")}
 
 	err := writeReaderToFile(errReader, path)
 	if err == nil {
@@ -62,21 +61,12 @@ func TestHasSSMLFlag(t *testing.T) {
 	}
 }
 
-func TestProfileValidation(t *testing.T) {
-	// The profile gate lives in main; exercise the same rule via the CLI.
-	var out strings.Builder
-	_ = out
-	if !strings.EqualFold("none", "none") {
-		t.Fatal("sanity")
-	}
-}
-
 type errorReader struct {
 	data []byte
 	err  error
 }
 
-func (r errorReader) Read(p []byte) (int, error) {
+func (r *errorReader) Read(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
@@ -86,8 +76,9 @@ func (r errorReader) Read(p []byte) (int, error) {
 		}
 		return 0, io.EOF
 	}
+	// 一次调用返回全部剩余数据并在之后返回 err。
 	n := copy(p, r.data)
-	r.data = r.data[n:] // r 是值接收者：data 副本，但测试只需首次读返回数据+错误
+	r.data = r.data[n:]
 	if len(r.data) == 0 && r.err != nil {
 		return n, r.err
 	}

@@ -56,10 +56,10 @@ func main() {
 
 	var reader io.ReadCloser
 	var err error
-	if strings.EqualFold(flag.Arg(0), "ssml") || hasSSMLFlag(flag.Args()) {
-		reader, err = synth.StreamSSML(ctx, *input, opts...)
+	if hasSSMLFlag(flag.Args()) {
+		reader, err = synth.StreamSSML(ctx, *input)
 	} else {
-		reader, err = synth.Stream(ctx, *input, opts...)
+		reader, err = synth.Stream(ctx, *input)
 	}
 	if err != nil {
 		log.Fatal(err)
