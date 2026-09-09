@@ -1,0 +1,22 @@
+version: 1
+sampleRate: 24000
+channels: 2
+chunkSamples: 4096
+stages:
+  - name: upmix
+    params: { mode: center }
+  - name: eq
+    params: { type: highpass, freq: 80, q: 0.707 }
+  - name: compressor
+    params: { threshold: -18, ratio: 3, attack: 10, release: 150 }
+  - name: chorus
+    params: { baseDelay: 0.025, depth: 0.0015, speedHz: 0.15, stages: 2, mix: 0.35 }
+  - name: delay
+    params: { time: 0.1, feedback: 0, mix: 0.3 }
+  - name: fdnreverb
+    params: { rt60: 1.6, damp: 0.35, preDelay: 0.018, wet: 0.2, dry: 1.0 }
+  - name: limiter
+    params: { threshold: -1, release: 100 }
+output:
+  format: wav
+  bitDepth: 16

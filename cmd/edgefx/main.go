@@ -1,7 +1,7 @@
-// Command edgefx is the edge-fx-tts CLI. V1: --profile none passthrough —
-// synthesize text/SSML via the Edge TTS backend and write the MP3 stream
-// verbatim to a file (the library's original capability). Effects profiles
-// and the full flag surface land in later tickets.
+// Command edgefx is the edge-fx-tts CLI. --profile none passes the Edge TTS
+// MP3 stream through verbatim (the library's original capability); any other
+// profile runs the synthesized stream through the decode → effect chain →
+// WAV pipeline.
 package main
 
 import (
@@ -15,26 +15,37 @@ import (
 	"strings"
 
 	"github.com/OodavidsinoO/edge-fx-tts"
+	"github.com/OodavidsinoO/edge-fx-tts/pkg/config"
+	"github.com/OodavidsinoO/edge-fx-tts/pkg/effects"
+	"github.com/OodavidsinoO/edge-fx-tts/pkg/pipeline"
 	"github.com/OodavidsinoO/edge-fx-tts/pkg/tts"
 )
 
 func main() {
-	var (
-		profile = flag.String("profile", "none", "fx profile; only 'none' (passthrough) is implemented in this ticket")
-		input   = flag.String("text", "hello world", "text or (with -type ssml) SSML input")
-		output  = flag.String("output", "", "output audio file path (required for --profile none)")
-		voice   = flag.String("voice", "", "voice short name, e.g. zh-CN-XiaoxiaoNeural")
-		rate    = flag.String("rate", "", "speech rate, e.g. +10%")
-		pitch   = flag.String("pitch", "", "speech pitch, e.g. +5Hz")
-		volume  = flag.String("volume", "", "speech volume, e.g. +10%")
-	)
-	flag.Parse()
+	if err := run(os.Args[1:], os.Stdout); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	if *profile != "none" {
-		log.Fatalf("--profile %q: only 'none' (passthrough) is implemented in V1; effect profiles arrive in later tickets", *profile)
+// run parses flags, synthesizes via the TTS backend, and either passes the
+// MP3 stream through (profile none) or runs it through the effects pipeline
+// (any other profile). It is separated from main for testability.
+func run(args []string, _ io.Writer) error {
+	fs := flag.NewFlagSet("edgefx", flag.ContinueOnError)
+	var (
+		profile = fs.String("profile", "none", "fx profile: none (passthrough) or a built-in preset")
+		input   = fs.String("text", "hello world", "text or (with -type ssml) SSML input")
+		output  = fs.String("output", "", "output audio file path (required)")
+		voice   = fs.String("voice", "", "voice short name, e.g. zh-CN-XiaoxiaoNeural")
+		rate    = fs.String("rate", "", "speech rate, e.g. +10%")
+		pitch   = fs.String("pitch", "", "speech pitch, e.g. +5Hz")
+		volume  = fs.String("volume", "", "speech volume, e.g. +10%")
+	)
+	if err := fs.Parse(args); err != nil {
+		return err
 	}
 	if *output == "" {
-		log.Fatal("--output is required for --profile none")
+		return errors.New("--output is required")
 	}
 
 	opts := make([]edgetts.Option, 0, 4)
@@ -56,20 +67,46 @@ func main() {
 
 	var reader io.ReadCloser
 	var err error
-	if hasSSMLFlag(flag.Args()) {
+	if hasSSMLFlag(fs.Args()) {
 		reader, err = synth.StreamSSML(ctx, *input)
 	} else {
 		reader, err = synth.Stream(ctx, *input)
 	}
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer reader.Close()
 
-	if err := writeReaderToFile(reader, *output); err != nil {
-		log.Fatal(err)
+	// Passthrough: write the MP3 stream verbatim.
+	if *profile == "none" || *profile == "" {
+		return writeReaderToFile(reader, *output)
 	}
-	fmt.Printf("saved audio to %s\n", *output)
+
+	// Effects profile: load chain, build nodes, run the pipeline to WAV.
+	spec, err := config.LoadProfile(*profile, "")
+	if err != nil {
+		return err
+	}
+	nodes, err := effects.BuildChain(spec)
+	if err != nil {
+		return err
+	}
+
+	out, err := os.Create(*output)
+	if err != nil {
+		return fmt.Errorf("create output file: %w", err)
+	}
+	defer out.Close()
+
+	sink, err := pipeline.NewWAVSink(out, spec.SampleRate, spec.Channels)
+	if err != nil {
+		return fmt.Errorf("wav sink: %w", err)
+	}
+	p, err := pipeline.New(reader, nodes, spec.SampleRate, spec.Channels, spec.ChunkSamples, sink)
+	if err != nil {
+		return fmt.Errorf("pipeline: %w", err)
+	}
+	return p.Run(ctx)
 }
 
 // hasSSMLFlag reports whether the first positional argument is "ssml" (the
