@@ -18,9 +18,29 @@ type wavSink struct {
 	closed     bool
 }
 
-// NewWAVSink returns a Sink that writes 16-bit PCM WAV to w.
-func NewWAVSink(w io.Writer, sampleRate, channels int) Sink {
-	return &wavSink{w: w, sampleRate: sampleRate, channels: channels}
+// NewWAVSink returns a Sink that writes 16-bit PCM WAV to w. A placeholder
+// RIFF header is written at construction so the data chunk starts at offset
+// 44 regardless of data size; Close patches the sizes. w must support seeking.
+func NewWAVSink(w io.Writer, sampleRate, channels int) (Sink, error) {
+	s := &wavSink{w: w, sampleRate: sampleRate, channels: channels}
+	header := make([]byte, 44)
+	copy(header[0:4], "RIFF")
+	binary.LittleEndian.PutUint32(header[4:8], 36) // patch on Close
+	copy(header[8:12], "WAVE")
+	copy(header[12:16], "fmt ")
+	binary.LittleEndian.PutUint32(header[16:20], 16) // fmt chunk size
+	binary.LittleEndian.PutUint16(header[20:22], 1)  // PCM
+	binary.LittleEndian.PutUint16(header[22:24], uint16(s.channels))
+	binary.LittleEndian.PutUint32(header[24:28], uint32(s.sampleRate))
+	binary.LittleEndian.PutUint32(header[28:32], uint32(s.sampleRate*s.channels*2)) // byte rate
+	binary.LittleEndian.PutUint16(header[32:34], uint16(s.channels*2))              // block align
+	binary.LittleEndian.PutUint16(header[34:36], 16)                                // bits per sample
+	copy(header[36:40], "data")
+	binary.LittleEndian.PutUint32(header[40:44], 0) // patch on Close
+	if _, err := w.Write(header); err != nil {
+		return nil, fmt.Errorf("wav: placeholder header: %w", err)
+	}
+	return s, nil
 }
 
 // Write implements Sink. buf is stereo-interleaved float32 in [-1, 1].

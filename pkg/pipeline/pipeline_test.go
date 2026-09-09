@@ -50,7 +50,11 @@ func TestPipelineEndToEnd(t *testing.T) {
 	}
 	defer out.Close()
 
-	p, err := New(f, buildTestChain(t), 24000, 2, 4096, NewWAVSink(out, 24000, 2))
+	sink, err := NewWAVSink(out, 24000, 2)
+	if err != nil {
+		t.Fatalf("NewWAVSink: %v", err)
+	}
+	p, err := New(f, buildTestChain(t), 24000, 2, 4096, sink)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -103,7 +107,11 @@ func TestPipelineCancellation(t *testing.T) {
 	}
 	defer out.Close()
 
-	p, err := New(f, buildTestChain(t), 24000, 2, 4096, NewWAVSink(out, 24000, 2))
+	sink, err := NewWAVSink(out, 24000, 2)
+	if err != nil {
+		t.Fatalf("NewWAVSink: %v", err)
+	}
+	p, err := New(f, buildTestChain(t), 24000, 2, 4096, sink)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -124,7 +132,10 @@ func TestPipelineCancellation(t *testing.T) {
 // TestWAVSinkHeader verifies a non-seekable writer is rejected on Close.
 func TestWAVSinkHeader(t *testing.T) {
 	var buf bytes.Buffer
-	s := NewWAVSink(&buf, 24000, 2)
+	s, err := NewWAVSink(&buf, 24000, 2)
+	if err != nil {
+		t.Fatalf("NewWAVSink: %v", err)
+	}
 	if err := s.Write([]float32{0.5, -0.5, 0.25, -0.25}); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
@@ -142,7 +153,10 @@ func TestWAVSinkSeekable(t *testing.T) {
 		t.Fatalf("create temp: %v", err)
 	}
 	defer out.Close()
-	s := NewWAVSink(out, 24000, 2)
+	s, err := NewWAVSink(out, 24000, 2)
+	if err != nil {
+		t.Fatalf("NewWAVSink: %v", err)
+	}
 	if err := s.Write([]float32{0.5, -0.5, 0.25, -0.25}); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
@@ -177,7 +191,11 @@ func TestPipelineEmptyChainRejected(t *testing.T) {
 		t.Fatalf("create temp: %v", err)
 	}
 	defer out.Close()
-	if _, err := New(f, nil, 24000, 2, 4096, NewWAVSink(out, 24000, 2)); err == nil {
+	sink, err := NewWAVSink(out, 24000, 2)
+	if err != nil {
+		t.Fatalf("NewWAVSink: %v", err)
+	}
+	if _, err := New(f, nil, 24000, 2, 4096, sink); err == nil {
 		t.Fatal("expected error for empty chain")
 	}
 }

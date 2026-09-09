@@ -110,12 +110,15 @@ type Pipeline struct {
 // stereo-interleaved float32 blocks. chunkSamples is the mono block size the
 // decoder produces.
 func New(src io.Reader, chain []effects.Node, sampleRate, channels, chunkSamples int, sink Sink) (*Pipeline, error) {
+	if len(chain) == 0 {
+		return nil, errors.New("pipeline: empty chain")
+	}
+	if chunkSamples <= 0 {
+		return nil, fmt.Errorf("pipeline: chunkSamples must be > 0, got %d", chunkSamples)
+	}
 	dec, err := decode.NewMinimp3Decoder(src)
 	if err != nil {
 		return nil, fmt.Errorf("pipeline: decoder: %w", err)
-	}
-	if len(chain) == 0 {
-		return nil, errors.New("pipeline: empty chain")
 	}
 	return &Pipeline{
 		decoder:      dec,
@@ -141,6 +144,13 @@ func (p *Pipeline) Run(ctx context.Context) error {
 	go func() { defer wg.Done(); p.consume(ctx) }()
 
 	wg.Wait()
+	// Close each chain node once after all stages finish, fulfilling the
+	// Node.Close contract.
+	for _, node := range p.chain {
+		if err := node.Close(); err != nil {
+			p.setErr(fmt.Errorf("pipeline: node close: %w", err))
+		}
+	}
 	return p.err
 }
 
@@ -155,6 +165,9 @@ func (p *Pipeline) setErr(err error) {
 // produce reads MP3, decodes to mono float32 blocks, and pushes them to ring1.
 func (p *Pipeline) produce(ctx context.Context) {
 	defer p.ring1.close()
+	// Close the decoder on exit so minimp3's internal decode goroutine stops
+	// (it otherwise loops forever on EOF waiting for ctx cancel).
+	defer p.decoder.Close()
 	mono := make([]float32, p.chunkSamples)
 	for {
 		select {
@@ -181,6 +194,11 @@ func (p *Pipeline) produce(ctx context.Context) {
 	}
 }
 
+// defaultTailSeconds is how much silence to push through the chain after the
+// real data drains, so reverb/delay tails decay naturally instead of being
+// hard-cut. Covers the longest preset (sci-fi reverb RT60 2.5-3.5s).
+const defaultTailSeconds = 4.0
+
 // process pulls mono blocks, upmixes to stereo, runs the chain, and pushes
 // stereo blocks to ring2.
 func (p *Pipeline) process(ctx context.Context) {
@@ -198,24 +216,47 @@ func (p *Pipeline) process(ctx context.Context) {
 		}
 		mono, ok := p.ring1.pop()
 		if !ok {
-			return
-		}
-		// Build a stereo buffer with mono in L and R=0; the chain's upmix
-		// head node fills R from L (center). If the chain has no upmix, R
-		// stays 0 (mono carried in L).
-		stereo := make([]float32, len(mono)*2)
-		for i, s := range mono {
-			stereo[i*2] = s
-		}
-		for _, node := range p.chain {
-			if err := node.ProcessInPlace(stereo); err != nil {
-				p.setErr(fmt.Errorf("pipeline: effect: %w", err))
-				return
+			// ring1 drained (producer closed on EOF/error): push silence so
+			// time-based effects decay naturally instead of a hard cut.
+			tailBlocks := int(defaultTailSeconds*float64(p.sampleRate)) / p.chunkSamples
+			for range tailBlocks {
+				if !p.processBlock(ctx, make([]float32, p.chunkSamples)) {
+					return
+				}
 			}
-		}
-		if !p.ring2.push(stereo) {
 			return
 		}
+		if !p.processBlock(ctx, mono) {
+			return
+		}
+	}
+}
+
+// processBlock upmixes mono, runs the chain, and pushes the stereo result to
+// ring2. It returns false if ctx is done or the ring is closed.
+func (p *Pipeline) processBlock(ctx context.Context, mono []float32) bool {
+	// Build a stereo buffer with mono in L and R=0; the chain's upmix
+	// head node fills R from L (center). If the chain has no upmix, R
+	// stays 0 (mono carried in L).
+	stereo := make([]float32, len(mono)*2)
+	for i, s := range mono {
+		stereo[i*2] = s
+	}
+	for _, node := range p.chain {
+		if err := node.ProcessInPlace(stereo); err != nil {
+			p.setErr(fmt.Errorf("pipeline: effect: %w", err))
+			return false
+		}
+	}
+	if !p.ring2.push(stereo) {
+		return false
+	}
+	select {
+	case <-ctx.Done():
+		p.setErr(ctx.Err())
+		return false
+	default:
+		return true
 	}
 }
 
