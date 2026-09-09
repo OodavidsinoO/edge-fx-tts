@@ -7,7 +7,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/tosone/minimp3"
+	"github.com/OodavidsinoO/edge-fx-tts/internal/decode/minimp3"
 )
 
 // ErrClosed is returned when reading from a closed decoder.
@@ -43,6 +43,10 @@ type Minimp3Decoder struct {
 	// underlying decoder field is written by its producer goroutine, so it
 	// is not read directly outside the constructor.
 	sampleRate int
+	// channels is the source channel count captured with sampleRate; it
+	// decides the per-sample byte width in readFromMinimp3 (mono: 2 bytes,
+	// stereo: 4 bytes).
+	channels int
 	// raw is the reusable scratch buffer for one decoder.Read call.
 	raw    []byte
 	closed bool
@@ -66,7 +70,9 @@ func NewMinimp3Decoder(r io.Reader) (*Minimp3Decoder, error) {
 	} else if n > 0 {
 		d.pending = append(d.pending, probe[:n]...)
 	}
-	d.sampleRate = dec.SampleRate
+	sr, ch, _, _ := dec.Meta()
+	d.sampleRate = sr
+	d.channels = ch
 	return d, nil
 }
 
@@ -91,12 +97,14 @@ func (d *Minimp3Decoder) Read(p []float32) (int, error) {
 		}
 	}
 	for n < len(p) {
-		// Consume buffered stereo PCM: 2 samples = 4 bytes.
-		for len(d.buf) >= 4 && n < len(p) {
-			l := int16(binary.LittleEndian.Uint16(d.buf[0:2]))
-			r := int16(binary.LittleEndian.Uint16(d.buf[2:4]))
-			d.buf = d.buf[4:]
-			p[n] = (float32(l) + float32(r)) / 2 / 32768
+		// Consume buffered PCM first (mono: 2 bytes/sample, stereo: 4).
+		width := 2
+		if d.channels == 2 {
+			width = 4
+		}
+		for len(d.buf) >= width && n < len(p) {
+			p[n] = d.sampleFromBytes(d.buf[:width])
+			d.buf = d.buf[width:]
 			n++
 		}
 		if n == len(p) {
@@ -117,7 +125,19 @@ func (d *Minimp3Decoder) Read(p []float32) (int, error) {
 	return n, nil
 }
 
-// readFromMinimp3 pulls one chunk from the underlying decoder, downmixes it
+// sampleFromBytes converts one PCM sample (2 bytes mono or 4 bytes stereo
+// interleaved) to a mono float32 in [-1, 1].
+func (d *Minimp3Decoder) sampleFromBytes(b []byte) float32 {
+	if d.channels == 2 {
+		l := int16(binary.LittleEndian.Uint16(b[0:2]))
+		r := int16(binary.LittleEndian.Uint16(b[2:4]))
+		return (float32(l) + float32(r)) / 2 / 32768
+	}
+	s := int16(binary.LittleEndian.Uint16(b[0:2]))
+	return float32(s) / 32768
+}
+
+// readFromMinimp3 pulls one chunk from the underlying decoder, converts it
 // into p (mono float32), and buffers any unused tail bytes for later reads.
 func (d *Minimp3Decoder) readFromMinimp3(p []float32) (int, error) {
 	if d.raw == nil {
@@ -130,15 +150,17 @@ func (d *Minimp3Decoder) readFromMinimp3(p []float32) (int, error) {
 	raw := d.raw[:more]
 
 	// Consume into p and leave the remainder in d.buf for the next Read.
+	width := 2
+	if d.channels == 2 {
+		width = 4
+	}
 	consumed := 0
-	for consumed+4 <= len(raw) && consumed/4 < len(p) {
-		l := int16(binary.LittleEndian.Uint16(raw[consumed : consumed+2]))
-		r := int16(binary.LittleEndian.Uint16(raw[consumed+2 : consumed+4]))
-		p[consumed/4] = (float32(l) + float32(r)) / 2 / 32768
-		consumed += 4
+	for consumed+width <= len(raw) && consumed/width < len(p) {
+		p[consumed/width] = d.sampleFromBytes(raw[consumed : consumed+width])
+		consumed += width
 	}
 	d.buf = append(d.buf, raw[consumed:]...)
-	return consumed / 4, err
+	return consumed / width, err
 }
 
 // Close implements Decoder.

@@ -55,8 +55,13 @@ func TestDecodeSampleStream(t *testing.T) {
 		}
 	}
 
-	if total < 24000 {
-		t.Fatalf("decoded %d frames, want >= 24000 (>= ~1s of audio)", total)
+	// The file holds 181 MPEG-2 frames x 576 samples = 104256 mono samples
+	// (4.344 s at 24 kHz); minimp3 drops the final incomplete/padded frames,
+	// so the observed count is slightly lower (177 frames = 101952). The
+	// bound catches channel-width regressions: consuming a mono stream as
+	// stereo halves the count to ~52k, far below this floor.
+	if total < 100000 {
+		t.Fatalf("decoded %d frames, want >= 100000 (mono stream; 2x regression would yield ~52k)", total)
 	}
 	if rms := math.Sqrt(sumSquares / float64(total)); rms < 0.001 {
 		t.Fatalf("RMS = %v, sample appears silent", rms)
