@@ -2,6 +2,9 @@ version: 1
 sampleRate: 24000
 channels: 2
 chunkSamples: 4096
+# E (broadcaster) chain per feasibility report §6.3. The EBU R128 -23 LUFS
+# delivery calibration is NOT applied here; apply an offline
+# measurement/gain stage before broadcast delivery (report §6.4).
 stages:
   - name: upmix
     params: { mode: center }
