@@ -1,367 +1,229 @@
-# edgetts
+# edge-fx-tts
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/lib-x/edgetts.svg)](https://pkg.go.dev/github.com/lib-x/edgetts)
-[![Release](https://img.shields.io/github/v/release/lib-x/edgetts)](https://github.com/lib-x/edgetts/releases)
-[![CI](https://github.com/lib-x/edgetts/actions/workflows/ci.yml/badge.svg)](https://github.com/lib-x/edgetts/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/lib-x/edgetts)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/lib-x/edgetts)](https://goreportcard.com/report/github.com/lib-x/edgetts)
+[![Go](https://img.shields.io/github/go-mod/go-version/OodavidsinoO/edge-fx-tts)](go.mod)
+[![Release](https://img.shields.io/github/v/release/OodavidsinoO/edge-fx-tts)](https://github.com/OodavidsinoO/edge-fx-tts/releases)
+[![CI](https://github.com/OodavidsinoO/edge-fx-tts/actions/workflows/ci.yml/badge.svg)](https://github.com/OodavidsinoO/edge-fx-tts/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/OodavidsinoO/edge-fx-tts)](LICENSE)
 
 [English](README.md) | 简体中文
 
-## 文档导航
+## 这是什么
 
-- 英文文档：[`README.md`](README.md)
-- 中文文档：`README.zh-CN.md`
-- API 文档：https://pkg.go.dev/github.com/lib-x/edgetts
-- Release 列表：https://github.com/lib-x/edgetts/releases
+edge-fx-tts 是一个构建在 Microsoft Edge TTS 之上的 Go 后处理音效引擎。它先用 Edge
+TTS 合成语音（返回 **24 kHz、MPEG-2 Layer 3、单声道** 流），解码后送入可配置的效果链，
+最终输出 **16-bit PCM WAV**——或经可选的 ffmpeg 编码为 MP3。
 
-## 目录
+内置 CLI（`cmd/edgefx`）端到端暴露整个引擎：
 
-- [特性](#特性)
-- [安装](#安装)
-- [快速开始](#快速开始)
-- [可运行 demo](#可运行-demo)
-- [包级便捷 API](#包级便捷-api)
-- [Client API](#client-api)
-- [输出方式](#输出方式)
-- [批量处理](#批量处理)
-- [Voices](#voices)
-- [Demo 参数](#demo-参数)
-- [迁移指南](#迁移指南)
-- [兼容说明](#兼容说明)
-
-一个更易用的 Microsoft Edge TTS Go 库，适合单次调用、服务端流式输出和批量生成等场景。
+- `--profile none`（默认）**原样直通**合成出的 MP3 流——即原始 Edge TTS 能力本身，
+  不经过任何处理，也不需要 ffmpeg。
+- 任何其他 profile 都会解码该流并运行预设效果链：
+  upmix 立体声 → EQ/动态 → 时基效果 → limiter → WAV。
 
 ## 特性
 
-- 基于 `Client` 的可复用 API。
-- 提供包级便捷函数，适合一次性调用。
-- `Text` 和 `SSML` 都是一等输入类型。
-- 支持输出到 `[]byte`、文件、`io.Writer`、流、目录和 ZIP。
-- 提供 voice 列表与筛选能力。
-- 保留旧 `Speech` API 作为弃用兼容层。
+- **MP3 直通** — `--profile none` 逐字节拷贝 Edge TTS 流；纯文本→MP3 流程只需要 CLI 本身。
+- **13 效果链** — `upmix`、`eq`、`compressor`、`deesser`、`chorus`、`delay`、
+  `fdnreverb`、`limiter`、`formant`（自研倒谱源-滤波器共振峰搬移）、`pitchcorrector`、
+  `flanger`、`gate`、`wsola`（保时长的频谱变调）。
+- **12 个内置预设 profile** — filmai ×4（D1–D4 电影 AI 感）、broadcast ×4（E1–E3
+  播音员/电台/电话会议）+ 基座、aifake / doubledelay / scifiatmo（A/B/C 演示预设），
+  另有最小 `placeholder` 占位。
+- **流式管线** — 解码 → 效果链 → WAV 三协程流水线，有界 SPSC 环形缓冲 + 天然背压，
+  并带尾部尾音，避免混响/延迟衰减被硬切。
+- **完整 CLI 表面** — `--profile`、`--type`、`--text`、`--file`、`--output`、
+  `--voice`、`--rate`、`--pitch`、`--volume`、`--format`。
+- **库 API** — 轻量 `tts.Synthesizer` 接口使引擎与具体合成后端解耦；profile、链构建和
+  管线均为独立 `pkg/` 包。
 
 ## 安装
 
+安装 CLI：
+
 ```bash
-go get github.com/lib-x/edgetts
+go install github.com/OodavidsinoO/edge-fx-tts/cmd/edgefx@latest
 ```
 
-## 快速开始
+或作为库使用：
 
-### 保存文本到 mp3
+```bash
+go get github.com/OodavidsinoO/edge-fx-tts
+```
+
+合成需要访问 Edge TTS 网络服务，因此需要联网。
+
+## CLI 用法
+
+```bash
+edgefx -h
+```
+
+| 参数 | 默认 | 说明 |
+| --- | --- | --- |
+| `--profile` | `none` | `none` = 原样 MP3 直通，或内置预设名 |
+| `--type` | `text` | 输入类型：`text` 或 `ssml`。首位置参数 `ssml` 的旧写法仍兼容（显式 `--type` 优先） |
+| `--text` | `hello world` | 文本（`--type ssml` 时为 SSML）输入 |
+| `--file` | | 从文件读取全部输入（文本或 SSML）；与 `--text` 互斥 |
+| `--output` | *（必填）* | 输出音频文件路径 |
+| `--voice` | | 声音短名，如 `en-US-GuyNeural`、`zh-CN-XiaoxiaoNeural` |
+| `--rate` | | 语速，如 `+10%` |
+| `--pitch` | | 音高，如 `+5Hz` |
+| `--volume` | | 音量，如 `+10%` |
+| `--format` | `auto` | 输出格式：`mp3` 或 `wav`。`auto` 按输出扩展名推断——预设链默认 WAV、直通保持 MP3 |
+
+输出格式规则：
+
+- `--profile none` 始终原样写出原始 MP3 流——`--format` 无关，绝不调用 ffmpeg。
+- 预设链默认输出 WAV；只有传 `--format mp3` **或**输出路径为 `.mp3` 时才例外。此时
+  管线先渲染到临时 WAV，再用 **ffmpeg** 编码（`ffmpeg -y -i <tmp.wav> -b:a 192k <out.mp3>`）。
+- 未安装 ffmpeg 时输出 MP3 会报清晰错误：
+  `ffmpeg required for MP3 output; install ffmpeg or use .wav`。
+
+### 示例
+
+纯文本转 MP3——无 profile、无 ffmpeg，流原样直通：
+
+```bash
+edgefx --text "Hello, world." --voice en-US-GuyNeural --output hello.mp3
+```
+
+SSML 输入（也接受位置参数 `ssml` 的写法）：
+
+```bash
+edgefx --type ssml --text '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US"><voice name="en-US-GuyNeural"><prosody rate="+10%">hello world</prosody></voice></speak>' --output hello.mp3
+```
+
+效果预设转 WAV：
+
+```bash
+edgefx --profile filmai-d2 --text "Hello from the machine." --output out.wav
+```
+
+效果预设转 MP3（需要 ffmpeg）：
+
+```bash
+edgefx --profile filmai --text "Hello again." --format mp3 --output out.mp3
+```
+
+从文件读取输入：
+
+```bash
+edgefx --file script.txt --profile broadcast-e2 --output out.wav
+```
+
+在预设之上叠加音色与韵律参数：
+
+```bash
+edgefx --profile broadcast --voice zh-CN-YunxiNeural --rate +10% --pitch +5Hz --text "你好，世界" --output out.wav
+```
+
+## 内置预设 profile
+
+所有预设均以 24 kHz 立体声运行，并以峰值 limiter 收尾。下表中参数为随附默认值。
+
+| Profile | 风格 | 关键链路 |
+| --- | --- | --- |
+| `aifake` | 合成 AI 感，可懂度优先（报告 §3.2 A） | HPF 100 Hz；压缩 2:1 / −20 dB；带通 300–3400 Hz；合唱 22 ms ×3；FDN RT60 1.0 s wet 0.15 |
+| `doubledelay` | 电影双音 + slapback（报告 §3.2 B） | HPF 80 Hz；压缩 3:1 / −18 dB；合唱 25 ms ×2 wet 0.35；slapback 100 ms、零反馈；FDN RT60 1.6 s |
+| `scifiatmo` | 科幻氛围（报告 §3.2 C） | HPF 80 Hz；压缩 4:1 / −16 dB；宽合唱 30 ms ×3；环境延迟 500 ms、FB 0.35；FDN RT60 3.0 s |
+| `filmai` | D1 攻壳广播 AI 腔（报告 §6.2） | WSOLA −1 st；flanger 0.4 Hz；合唱 25 ms ×3；带通 300–3400 Hz；FDN RT60 0.5 s；压缩 3.5:1；de-esser |
+| `filmai-d2` | D2 GLaDOS 量化合成 | 音高校正（chromatic、0 ms）+ formant 上移 +1.8；其后同 D1 链路 |
+| `filmai-d3` | D3 HAL/TARS 冷静服务器嗓 | WSOLA −2.5 st；噪声门 −45 dB 10:1；压缩 4:1 快起音；FDN RT60 0.6 s；de-esser |
+| `filmai-d4` | D4 微距 OS，近讲微调 | 100 Hz +1.5 dB；3 kHz +2.5 dB；轻压缩 1.5:1；FDN RT60 0.2 s wet 0.15 |
+| `broadcast` / `broadcast-e1` | E1 播音员（报告 §6.3） | 广播 EQ 曲线（HP 85 Hz、+1.5 @250 Hz、−1.5 @800 Hz Q4、+2.5 @3 kHz、+1.5 @5.5 kHz、LP 7 kHz、−1.5 @7 kHz Q4）；de-esser；压缩 3:1；FDN RT60 0.25 s |
+| `broadcast-e2` | E2 电台/DJ，更密 | 同 EQ 且 250 Hz 为 +3 dB；压缩 5:1 快；FDN RT60 0.25 s |
+| `broadcast-e3` | E3 电话会议 | 带通 300–3400 Hz；+1 dB @1 kHz；压缩 5:1 极快起音 |
+
+说明：
+
+- `filmai` 即 D1 基座链路（全开处理）；`broadcast` 与 `broadcast-e1` 链路相同。
+- 广播家族按可行性报告 §6.3 实现；EBU R128 **−23 LUFS** 交付定标**未**写入
+  profile——广播交付前需离线测量/增益级（报告 §6.4）。
+- `placeholder` 是最小保留占位（upmix + limiter），不是生产风格。
+
+## 库 API
+
+引擎由一组独立 `pkg/` 包组成。示例
+（`examples/edgefx/effects.go`，可 `go run ./examples/edgefx` 运行）：
 
 ```go
 package main
 
 import (
-    "context"
+	"context"
+	"fmt"
+	"os"
 
-    "github.com/lib-x/edgetts"
+	edgetts "github.com/OodavidsinoO/edge-fx-tts"
+	"github.com/OodavidsinoO/edge-fx-tts/pkg/config"
+	"github.com/OodavidsinoO/edge-fx-tts/pkg/effects"
+	"github.com/OodavidsinoO/edge-fx-tts/pkg/pipeline"
+	"github.com/OodavidsinoO/edge-fx-tts/pkg/tts"
 )
 
 func main() {
-    err := edgetts.Save(
-        context.Background(),
-        "你好，世界。",
-        "hello.mp3",
-        edgetts.WithVoice("zh-CN-XiaoxiaoNeural"),
-    )
-    if err != nil {
-        panic(err)
-    }
+	ctx := context.Background()
+
+	// 1. 经 tts.Synthesizer 接口合成（edgetts 实现）。
+	synth := tts.NewEdgeTTS(edgetts.New(edgetts.WithVoice("en-US-GuyNeural")))
+	stream, err := synth.Stream(ctx, "Hello from edge-fx-tts.")
+	if err != nil {
+		panic(err)
+	}
+	defer stream.Close()
+
+	// 2. 加载预设效果链（可另传外部覆盖目录）。
+	spec, err := config.LoadProfile("filmai-d2", "")
+	if err != nil {
+		panic(err)
+	}
+
+	// 3. 由冻结的 ChainSpec 构建效果节点。
+	nodes, err := effects.BuildChain(spec)
+	if err != nil {
+		panic(err)
+	}
+
+	// 4. 运行流式管线：解码 -> 效果链 -> WAV sink。
+	out, err := os.Create("output.wav")
+	if err != nil {
+		panic(err)
+	}
+	defer out.Close()
+
+	sink, err := pipeline.NewWAVSink(out, spec.SampleRate, spec.Channels)
+	if err != nil {
+		panic(err)
+	}
+	p, err := pipeline.New(stream, nodes, spec.SampleRate, spec.Channels, spec.ChunkSamples, sink)
+	if err != nil {
+		panic(err)
+	}
+	if err := p.Run(ctx); err != nil {
+		panic(err)
+	}
+	fmt.Println("wrote output.wav")
 }
 ```
 
-### 复用一个 client
+`tts.Synthesizer` 接口（`Stream` / `StreamSSML`，均返回流式 MP3 `io.ReadCloser`）使引擎
+与后端解耦。`tts.NewEdgeTTS` 包装根包的 `edgetts.Client`，后者还提供常用的一次性助手
+（`Save`、`Bytes`、`Stream`、`StreamSSML`、批量和 ZIP 输出、voice 列表/筛选）。
+自定义链可写成 YAML/JSON，用 `config.Load` / `config.LoadBytes` 加载，不必用预设名。
 
-```go
-client := edgetts.New(
-    edgetts.WithVoice("zh-CN-XiaoxiaoNeural"),
-    edgetts.WithRate("+10%"),
-)
-
-data, err := client.Bytes(context.Background(), "这是一段可复用 client 的示例。")
-```
-
-## 可运行 demo
-
-仓库内提供了一个可直接运行的 demo：
+## 开发
 
 ```bash
-go run ./cmd/demo -text "你好，世界" -voice zh-CN-XiaoxiaoNeural -output hello.mp3
+go test ./...
+go vet ./...
+go test -race ./...
 ```
 
-使用流式输出写文件：
+测试覆盖 CLI、config schema、单效果行为（恒等/直通、左右声道隔离、量化、门限、
+热循环零分配）以及解码/管线往返。CI 在 push 到 `main` 及每个 PR 时运行
+`go test ./...` + `go vet ./...`。
 
-```bash
-go run ./cmd/demo -text "hello world" -voice en-US-GuyNeural -output hello.mp3 -stream
-```
+## 许可证
 
-使用 SSML：
-
-```bash
-go run ./cmd/demo -type ssml -text '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US"><voice name="en-US-GuyNeural"><prosody rate="+10%">hello world</prosody></voice></speak>' -output hello.mp3
-```
-
-如果不传 `-output`，demo 会在内存中生成音频并打印字节数。
-
-## 包级便捷 API
-
-适合一次性调用。
-
-### 文本转 bytes
-
-```go
-data, err := edgetts.Bytes(
-    ctx,
-    "hello world",
-    edgetts.WithVoice("en-US-GuyNeural"),
-)
-```
-
-### SSML 转 bytes
-
-```go
-ssml := `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US"><voice name="en-US-GuyNeural"><prosody rate="+10%">hello world</prosody></voice></speak>`
-data, err := edgetts.BytesSSML(ctx, ssml)
-```
-
-### 文本直接保存到文件
-
-```go
-err := edgetts.Save(ctx, "hello world", "hello.mp3", edgetts.WithVoice("en-US-GuyNeural"))
-```
-
-### SSML 直接保存到文件
-
-```go
-err := edgetts.SaveSSML(ctx, ssml, "hello.mp3")
-```
-
-## Client API
-
-适合复用默认配置、服务端场景和批量任务。
-
-### 创建一个可复用 client
-
-```go
-client := edgetts.New(
-    edgetts.WithVoice("en-US-GuyNeural"),
-    edgetts.WithRate("+15%"),
-)
-```
-
-### 使用显式 Request 处理 Text / SSML
-
-```go
-textReq := edgetts.Text("hello world", edgetts.WithVoice("en-US-GuyNeural"))
-textData, err := client.Do(ctx, textReq)
-
-ssmlReq := edgetts.SSML(`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US"><voice name="en-US-GuyNeural"><prosody pitch="+5Hz">hello world</prosody></voice></speak>`)
-ssmlData, err := client.Do(ctx, ssmlReq)
-
-_ = textData
-_ = ssmlData
-```
-
-## 输出方式
-
-### 写入 `io.Writer`
-
-```go
-var buf bytes.Buffer
-_, err := client.WriteTo(ctx, "hello world", &buf)
-```
-
-### 将 SSML 写入 `io.Writer`
-
-```go
-var buf bytes.Buffer
-_, err := client.WriteSSMLTo(ctx, ssml, &buf)
-```
-
-### 流式输出文本音频
-
-```go
-stream, err := client.Stream(ctx, "hello world")
-if err != nil {
-    return err
-}
-defer stream.Close()
-
-_, err = io.Copy(w, stream)
-```
-
-### 流式输出 SSML 音频
-
-```go
-stream, err := client.StreamSSML(ctx, ssml)
-if err != nil {
-    return err
-}
-defer stream.Close()
-
-_, err = io.Copy(w, stream)
-```
-
-### 在 HTTP handler 中直接流式返回
-
-```go
-client := edgetts.New(edgetts.WithVoice("en-US-GuyNeural"))
-
-http.HandleFunc("/tts", func(w http.ResponseWriter, r *http.Request) {
-    stream, err := client.Stream(r.Context(), "hello from streaming tts")
-    if err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
-    }
-    defer stream.Close()
-
-    w.Header().Set("Content-Type", "audio/mpeg")
-    _, _ = io.Copy(w, stream)
-})
-```
-
-### 直接保存 SSML 到文件
-
-```go
-err := client.SaveSSML(ctx, ssml, "speech.mp3")
-```
-
-## 批量处理
-
-### 批量保存到目录
-
-```go
-results, err := client.SaveBatch(ctx, "out", []edgetts.BatchItem{
-    {Name: "a.mp3", Request: edgetts.Text("你好", edgetts.WithVoice("zh-CN-XiaoxiaoNeural"))},
-    {Name: "b.mp3", Request: edgetts.Text("hello", edgetts.WithVoice("en-US-GuyNeural"))},
-})
-```
-
-每个 `BatchResult` 包含：
-
-- `Name`
-- `Bytes`
-- `N`
-- `Err`
-
-### 批量写入 ZIP
-
-```go
-f, _ := os.Create("tts.zip")
-defer f.Close()
-
-err := client.WriteZIP(ctx, f, []edgetts.BatchItem{
-    {Name: "a.mp3", Request: edgetts.Text("你好", edgetts.WithVoice("zh-CN-XiaoxiaoNeural"))},
-    {Name: "b.mp3", Request: edgetts.SSML(ssml)},
-}, map[string]any{"source": "demo"})
-```
-
-## Voices
-
-### 获取 voice 列表
-
-```go
-voices, err := client.Voices(ctx)
-```
-
-### 筛选 voice
-
-```go
-matches := edgetts.FilterVoices(voices, edgetts.VoiceFilter{
-    Locale: "zh-CN",
-    Gender: "Female",
-})
-```
-
-### 查找第一个匹配的 voice
-
-```go
-voice, err := client.FindVoice(ctx, edgetts.VoiceFilter{
-    ShortName: "zh-CN-XiaoxiaoNeural",
-})
-```
-
-## Demo 参数
-
-```bash
-go run ./cmd/demo -h
-```
-
-主要参数：
-
-- `-type`（`text` 或 `ssml`）
-- `-text`
-- `-output`
-- `-voice`
-- `-rate`
-- `-pitch`
-- `-volume`
-- `-stream`
-
-## 迁移指南
-
-旧 `Speech` API 仍然可用，但不再推荐作为新入口。
-
-| 旧用法 | 新用法 |
-| --- | --- |
-| `NewSpeech(opts...)` | `client := edgetts.New(opts...)` |
-| `speech.AddSingleTask(text, w); speech.StartTasks()` | `client.WriteTo(ctx, text, w)` |
-| `speech.AddSingleTask(text, file); speech.StartTasks()` | `client.Save(ctx, text, path)` |
-| `speech.GetVoiceList()` | `client.Voices(ctx)` |
-| `AddPackTask(...)` | `client.SaveBatch(...)` 或 `client.WriteZIP(...)` |
-| 文本任务 + 每次调用单独配置 | `client.Do(edgetts.Text(...))` |
-| SSML 高级场景 | `client.Do(edgetts.SSML(...))` 或 `client.StreamSSML(...)` |
-
-### 迁移示例
-
-旧写法：
-
-```go
-speech, err := edgetts.NewSpeech(edgetts.WithVoice("zh-CN-XiaoxiaoNeural"))
-if err != nil {
-    panic(err)
-}
-
-file, err := os.Create("hello.mp3")
-if err != nil {
-    panic(err)
-}
-defer file.Close()
-
-if err := speech.AddSingleTask("你好，世界", file); err != nil {
-    panic(err)
-}
-if err := speech.StartTasks(); err != nil {
-    panic(err)
-}
-```
-
-新写法：
-
-```go
-client := edgetts.New(edgetts.WithVoice("zh-CN-XiaoxiaoNeural"))
-if err := client.Save(context.Background(), "你好，世界", "hello.mp3"); err != nil {
-    panic(err)
-}
-```
-
-## 兼容说明
-
-旧 `Speech` task API 仍作为兼容包装层存在，但新代码应优先使用 `Client` 和包级便捷函数。
-
-## 参考
-
-- https://github.com/rany2/edge-tts
-- https://github.com/surfaceyu/edge-tts-go
-- https://github.com/pp-group/edge-tts-go
-- https://github.com/Migushthe2nd/MsEdgeTTS
-- https://gist.github.com/czyt/a2d83de838c9b65ab14fc18136f53bc6
-- https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice
-
-## 说明
-
-- `Speech` 仍然保留用于兼容，但新集成建议使用 `Client`。
-- 实际网络合成效果依赖上游 Edge TTS 服务行为。
+MIT — 见 [LICENSE](LICENSE)。Copyright (c) 2024 虫子樱桃（上游 `lib-x/edgetts`）、
+2026 OodavidsinoO。
