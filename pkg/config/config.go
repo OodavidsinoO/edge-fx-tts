@@ -223,6 +223,9 @@ func Build(cfg *Config) (*ChainSpec, error) {
 	if len(spec.Stages) == 0 {
 		return nil, errors.New("config: chain has no enabled stages")
 	}
+	if !seenTerminal {
+		return nil, errors.New("config: chain must end with a terminal effect (limiter)")
+	}
 	return spec, nil
 }
 

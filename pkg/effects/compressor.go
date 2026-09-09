@@ -35,6 +35,9 @@ func newCompressor(sampleRate int, params map[string]any) (Node, error) {
 		if err := c.SetRatio(getFloat(params, "ratio", 2)); err != nil {
 			return nil, fmt.Errorf("ratio: %w", err)
 		}
+		if err := c.SetKnee(getFloat(params, "knee", 6)); err != nil {
+			return nil, fmt.Errorf("knee: %w", err)
+		}
 		if err := c.SetAttack(getFloat(params, "attack", 10)); err != nil {
 			return nil, fmt.Errorf("attack: %w", err)
 		}

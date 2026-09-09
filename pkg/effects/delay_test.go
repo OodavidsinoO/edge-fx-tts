@@ -46,7 +46,9 @@ func TestDelayImpulseEcho(t *testing.T) {
 		t.Fatal(err)
 	}
 	// 0.1 s at 24 kHz = 2400 samples. The echo must land at L sample 2400
-	// (buffer index 4800) and nowhere else (feedback=0, mix=1).
+	// (buffer index 4800) and nowhere else (feedback=0, mix=1). R must stay
+	// silent throughout: L/R isolation means the L impulse never leaks into
+	// the R channel.
 	for i := 0; i < len(buf); i += 2 {
 		want := float32(0)
 		if i == 4800 {
@@ -54,6 +56,9 @@ func TestDelayImpulseEcho(t *testing.T) {
 		}
 		if buf[i] != want {
 			t.Fatalf("L sample %d: got %v want %v", i, buf[i], want)
+		}
+		if buf[i+1] != 0 {
+			t.Fatalf("R sample %d: got %v want 0 (L impulse leaked into R)", i, buf[i+1])
 		}
 	}
 }

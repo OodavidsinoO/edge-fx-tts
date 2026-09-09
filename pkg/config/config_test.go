@@ -155,6 +155,17 @@ func TestLoadProfileUnknown(t *testing.T) {
 	}
 }
 
+func TestBuildNoTerminalRejected(t *testing.T) {
+	cfg := &Config{Version: 1, Stages: []Stage{{Name: "upmix"}, {Name: "eq"}}}
+	_, err := Build(cfg)
+	if err == nil {
+		t.Fatal("expected error: chain without terminal limiter")
+	}
+	if !strings.Contains(err.Error(), "terminal effect") {
+		t.Fatalf("error should mention terminal effect: %v", err)
+	}
+}
+
 func TestBuildEmptyChainRejected(t *testing.T) {
 	cfg := &Config{Version: 1, Stages: nil}
 	_, err := Build(cfg)
