@@ -144,42 +144,47 @@ func LoadBytes(data []byte) (*ChainSpec, error) {
 	return Build(&cfg)
 }
 
-// Build validates a Config and produces an immutable ChainSpec.
+// Build validates a Config and produces an immutable ChainSpec. It does not
+// mutate cfg; defaults are applied to the returned spec only.
 func Build(cfg *Config) (*ChainSpec, error) {
 	if cfg.Version != 1 {
 		return nil, fmt.Errorf("config: unsupported version %d (want 1)", cfg.Version)
 	}
-	if cfg.SampleRate == 0 {
-		cfg.SampleRate = DefaultSampleRate
+	sampleRate := cfg.SampleRate
+	if sampleRate == 0 {
+		sampleRate = DefaultSampleRate
 	}
-	if !supportedSampleRates[cfg.SampleRate] {
-		return nil, fmt.Errorf("config: unsupported sampleRate %d (want 24000 or 48000)", cfg.SampleRate)
+	if !supportedSampleRates[sampleRate] {
+		return nil, fmt.Errorf("config: unsupported sampleRate %d (want 24000 or 48000)", sampleRate)
 	}
-	if cfg.Channels == 0 {
-		cfg.Channels = DefaultChannels
+	channels := cfg.Channels
+	if channels == 0 {
+		channels = DefaultChannels
 	}
-	if cfg.Channels != 1 && cfg.Channels != 2 {
-		return nil, fmt.Errorf("config: unsupported channels %d (want 1 or 2)", cfg.Channels)
+	if channels != 1 && channels != 2 {
+		return nil, fmt.Errorf("config: unsupported channels %d (want 1 or 2)", channels)
 	}
-	if cfg.ChunkSamples == 0 {
-		cfg.ChunkSamples = DefaultChunkSamples
+	chunkSamples := cfg.ChunkSamples
+	if chunkSamples == 0 {
+		chunkSamples = DefaultChunkSamples
 	}
-	if cfg.ChunkSamples <= 0 {
-		return nil, fmt.Errorf("config: chunkSamples must be > 0, got %d", cfg.ChunkSamples)
+	if chunkSamples <= 0 {
+		return nil, fmt.Errorf("config: chunkSamples must be > 0, got %d", chunkSamples)
 	}
-	if cfg.Output.Format == "" {
-		cfg.Output.Format = DefaultOutputFormat
+	output := cfg.Output
+	if output.Format == "" {
+		output.Format = DefaultOutputFormat
 	}
-	if cfg.Output.BitDepth == 0 {
-		cfg.Output.BitDepth = DefaultBitDepth
+	if output.BitDepth == 0 {
+		output.BitDepth = DefaultBitDepth
 	}
 
 	spec := &ChainSpec{
-		SampleRate:   cfg.SampleRate,
-		Channels:     cfg.Channels,
-		ChunkSamples: cfg.ChunkSamples,
-		Output:       cfg.Output,
-		Resample:     cfg.SampleRate != 24000,
+		SampleRate:   sampleRate,
+		Channels:     channels,
+		ChunkSamples: chunkSamples,
+		Output:       output,
+		Resample:     sampleRate != 24000,
 	}
 
 	seenUpmix := false
@@ -207,7 +212,12 @@ func Build(cfg *Config) (*ChainSpec, error) {
 		if info.TimeBased && !seenUpmix {
 			return nil, fmt.Errorf("config: stage %d: time-based effect %q must appear after upmix", i, st.Name)
 		}
-		spec.Stages = append(spec.Stages, StageSpec{Name: st.Name, Params: st.Params})
+		// Deep-copy params so the spec does not alias the caller's map.
+		params := make(map[string]any, len(st.Params))
+		for k, v := range st.Params {
+			params[k] = v
+		}
+		spec.Stages = append(spec.Stages, StageSpec{Name: st.Name, Params: params})
 	}
 
 	if len(spec.Stages) == 0 {
@@ -225,8 +235,8 @@ func Build(cfg *Config) (*ChainSpec, error) {
 var profilesFS embed.FS
 
 // LoadProfile loads a named preset profile. It first looks for an external
-// override file (configs/profiles/<name>.yaml in the working directory, or
-// the path given by overrideDir), then falls back to the embedded copy.
+// override file at overrideDir/<name>.yaml (when overrideDir is non-empty),
+// then falls back to the embedded copy.
 func LoadProfile(name string, overrideDir string) (*ChainSpec, error) {
 	if name == "" || name == "none" {
 		return nil, errors.New("config: profile 'none' is passthrough, not a chain profile")

@@ -155,6 +155,46 @@ func TestLoadProfileUnknown(t *testing.T) {
 	}
 }
 
+func TestBuildEmptyChainRejected(t *testing.T) {
+	cfg := &Config{Version: 1, Stages: nil}
+	_, err := Build(cfg)
+	if err == nil {
+		t.Fatal("expected error for empty chain")
+	}
+	if !strings.Contains(err.Error(), "no enabled stages") {
+		t.Fatalf("error should mention no enabled stages: %v", err)
+	}
+}
+
+func TestBuildDoesNotMutateInput(t *testing.T) {
+	cfg := &Config{Version: 1, Stages: []Stage{{Name: "upmix"}, {Name: "limiter"}}}
+	if _, err := Build(cfg); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if cfg.SampleRate != 0 {
+		t.Fatalf("Build mutated cfg.SampleRate = %d, want 0 (input untouched)", cfg.SampleRate)
+	}
+	if cfg.Channels != 0 {
+		t.Fatalf("Build mutated cfg.Channels = %d, want 0", cfg.Channels)
+	}
+}
+
+func TestBuildSpecDoesNotAliasParams(t *testing.T) {
+	cfg := &Config{Version: 1, Stages: []Stage{
+		{Name: "upmix", Params: map[string]any{"mode": "center"}},
+		{Name: "limiter"},
+	}}
+	spec, err := Build(cfg)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	// Mutating the caller's map must not affect the built spec.
+	cfg.Stages[0].Params["mode"] = "mutated"
+	if got := spec.Stages[0].Params["mode"]; got != "center" {
+		t.Fatalf("spec aliases caller params: got %v, want center", got)
+	}
+}
+
 func TestProfileNames(t *testing.T) {
 	names := ProfileNames()
 	if len(names) == 0 {
