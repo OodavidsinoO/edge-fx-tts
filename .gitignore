@@ -22,3 +22,7 @@ go.work
 /edgefx
 *.mp3
 *.wav
+
+# demo/ generated audio (keep demo/generate.sh committed)
+demo/*.wav
+demo/*.mp3

@@ -9,18 +9,16 @@ stages:
     params: { semitones: -2.5 }
   - name: gate
     params: { threshold: -45, ratio: 10, attack: 5, release: 150 }
-  - name: flanger
-    params: { rateHz: 0.4, depth: 0.008, mix: 0.25 }
   - name: chorus
-    params: { baseDelay: 0.025, depth: 0.001, speedHz: 1.0, stages: 3, mix: 0.3 }
+    params: { baseDelay: 0.02, depth: 0.0008, speedHz: 0.5, stages: 2, mix: 0.1 }
   - name: eq
-    params: { type: highpass, freq: 300, q: 0.707 }
+    params: { type: highpass, freq: 100, q: 0.707 }
   - name: eq
-    params: { type: lowpass, freq: 3400, q: 0.707 }
+    params: { type: peaking, freq: 3000, gain: 1.5, q: 0.8 }
   - name: compressor
     params: { threshold: -24, ratio: 4, attack: 5, release: 100 }
   - name: fdnreverb
-    params: { rt60: 0.6, damp: 0.6, preDelay: 0.05, wet: 0.2, dry: 1.0 }
+    params: { rt60: 0.25, damp: 0.6, preDelay: 0.02, wet: 0.1, dry: 1.0 }
   - name: deesser
     params: {}
   - name: limiter

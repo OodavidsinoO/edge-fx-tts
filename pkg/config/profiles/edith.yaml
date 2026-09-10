@@ -5,20 +5,18 @@ chunkSamples: 4096
 stages:
   - name: upmix
     params: { mode: center }
-  - name: pitchcorrector
-    params: { mode: chromatic, amount: 0.3, speedMs: 200, blockSize: 8192 }
-  - name: formant
-    params: { shift: 1.2 }
   - name: wsola
     params: { semitones: -1 }
+  - name: formant
+    params: { shift: 1.15 }
   - name: chorus
     params: { baseDelay: 0.02, depth: 0.0008, speedHz: 0.5, stages: 2, mix: 0.1 }
   - name: eq
     params: { type: highpass, freq: 100, q: 0.707 }
   - name: eq
-    params: { type: peaking, freq: 3000, gain: 1.5, q: 0.8 }
+    params: { type: peaking, freq: 3000, gain: 2.5, q: 0.8 }
   - name: fdnreverb
-    params: { rt60: 0.2, damp: 0.6, preDelay: 0.02, wet: 0.1, dry: 1.0 }
+    params: { rt60: 0.2, damp: 0.6, preDelay: 0.02, wet: 0.08, dry: 1.0 }
   - name: compressor
     params: { threshold: -22, ratio: 2.5, attack: 15, release: 120 }
   - name: deesser

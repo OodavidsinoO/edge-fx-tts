@@ -14,6 +14,7 @@ func TestPresetProfilesBuild(t *testing.T) {
 		"aifake", "doubledelay", "scifiatmo",
 		"filmai", "filmai-d2", "filmai-d3", "filmai-d4",
 		"broadcast", "broadcast-e1", "broadcast-e2", "broadcast-e3",
+		"jarvis", "edith", "ai-modern",
 	}
 	for _, name := range presets {
 		spec, err := config.LoadProfile(name, "")
