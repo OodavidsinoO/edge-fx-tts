@@ -125,7 +125,7 @@ edgefx --profile broadcast --voice zh-CN-YunxiNeural --rate +10% --pitch +5Hz --
 | --- | --- | --- |
 | `aifake` | 合成 AI 感，可懂度优先（报告 §3.2 A） | HPF 100 Hz；压缩 2:1 / −20 dB；带通 300–3400 Hz；合唱 22 ms ×3；FDN RT60 1.0 s wet 0.15 |
 | `doubledelay` | 电影双音 + slapback（报告 §3.2 B） | HPF 80 Hz；压缩 3:1 / −18 dB；合唱 25 ms ×2 wet 0.35；slapback 100 ms、零反馈；FDN RT60 1.6 s |
-| `scifiatmo` | 科幻氛围（报告 §3.2 C） | HPF 80 Hz；压缩 4:1 / −16 dB；宽合唱 30 ms ×3；环境延迟 500 ms、FB 0.35；FDN RT60 3.0 s |
+| `scifiatmo` | 科幻氛围（报告 §3.2 C） | HPF 80 Hz；压缩 4:1 / −16 dB；宽合唱 30 ms ×3；环境延迟 250 ms、FB 0.25；FDN RT60 3.0 s |
 | `filmai` | D1 攻壳广播 AI 腔（报告 §6.2） | WSOLA −1 st；flanger 0.4 Hz；合唱 25 ms ×3；带通 300–3400 Hz；FDN RT60 0.5 s；压缩 3.5:1；de-esser |
 | `filmai-d2` | D2 GLaDOS 量化合成 | 音高校正（chromatic、0 ms）+ formant 上移 +1.8；其后同 D1 链路 |
 | `filmai-d3` | D3 HAL/TARS 冷静服务器嗓 | WSOLA −2.5 st；噪声门 −45 dB 10:1；压缩 4:1 快起音；FDN RT60 0.6 s；de-esser |

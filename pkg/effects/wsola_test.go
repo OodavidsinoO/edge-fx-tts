@@ -101,6 +101,69 @@ func TestWsolaDownshiftHalfStep(t *testing.T) {
 	}
 }
 
+// TestWsolaChunkContinuity feeds the same input through the node once as a
+// single call and once in 4096-frame chunks, then asserts the two outputs
+// agree sample-by-sample within a tight bound. Before the overlap-carry
+// streaming fix, every chunk boundary produced a transient spike of up to
+// ~1.2e4x (maxdiff 12260 at the first boundary), because the shifter's
+// one-shot STFT restarted its OLA normalization with a near-zero window norm
+// at each chunk head. The overlap carry keeps the window coverage
+// continuous, so the chunked output must track the one-shot output closely.
+func TestWsolaChunkContinuity(t *testing.T) {
+	const (
+		frames  = 48000
+		chunk   = 4096
+		maxDiff = 1.0 // far below the pre-fix 12260 spike
+	)
+	tone := sineTone(440, frames)
+
+	oneshot := buildNode(t, "wsola", map[string]any{"semitones": -1, "frameSize": 2048})
+	buf := stereoFrames(frames)
+	for j := range frames {
+		buf[2*j] = float32(tone[j])
+	}
+	if err := oneshot.ProcessInPlace(buf); err != nil {
+		t.Fatalf("one-shot process: %v", err)
+	}
+	if err := oneshot.Close(); err != nil {
+		t.Fatalf("one-shot Close: %v", err)
+	}
+
+	chunked := buildNode(t, "wsola", map[string]any{"semitones": -1, "frameSize": 2048})
+	got := make([]float64, frames)
+	for off := 0; off < frames; off += chunk {
+		sz := chunk
+		if off+sz > frames {
+			sz = frames - off
+		}
+		cb := stereoFrames(sz)
+		for j := range sz {
+			cb[2*j] = float32(tone[off+j])
+		}
+		if err := chunked.ProcessInPlace(cb); err != nil {
+			t.Fatalf("chunked process at %d: %v", off, err)
+		}
+		for j := range sz {
+			got[off+j] = float64(cb[2*j])
+		}
+	}
+	if err := chunked.Close(); err != nil {
+		t.Fatalf("chunked Close: %v", err)
+	}
+
+	md, mi := 0.0, 0
+	for i := range frames {
+		d := math.Abs(got[i] - float64(buf[2*i]))
+		if d > md {
+			md, mi = d, i
+		}
+	}
+	if md > maxDiff {
+		t.Fatalf("chunked vs one-shot maxdiff %.4f at frame %d, want <= %.1f (chunk seams must not spike)",
+			md, mi, maxDiff)
+	}
+}
+
 func TestWsolaLRSeparation(t *testing.T) {
 	n := buildNode(t, "wsola", map[string]any{"semitones": -1})
 	frames := 8192

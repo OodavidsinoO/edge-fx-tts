@@ -16,8 +16,11 @@ func init() {
 // internally). algo-dsp ships no true WSOLA processor; the correct
 // equivalent for the -1 st "slight downward detune" (report §6.2, WSOLA
 // ratio 0.944) is a duration-preserving spectral pitch shift, which this
-// shifter implements. It is mono and one-shot buffer oriented: L and R each
-// get their own shifter so their state stays independent.
+// shifter implements. It is mono and streamed across ProcessInPlace calls:
+// each channel keeps an overlap carry of the previous call's tail so the
+// shifter's OLA window coverage stays continuous across chunk boundaries
+// (see processWsolaChannel). L and R each get their own shifter so their state
+// stays independent.
 //
 // Allocation exception: SpectralPitchShifter.Process returns a freshly
 // allocated slice by contract, so this node's hot path necessarily
@@ -29,12 +32,15 @@ type wsolaNode struct {
 	right *wsolaChannel
 }
 
-// wsolaChannel is one mono branch: the shifter plus a scratch buffer reused
+// wsolaChannel is one mono branch: the shifter, a scratch buffer reused
 // across calls so staging the float32 input into float64 does not allocate
-// per call.
+// per call, and the overlap carry holding the last (frameSize - hop) input
+// samples of the previous call.
 type wsolaChannel struct {
-	shifter *pitch.SpectralPitchShifter
-	scratch []float64
+	shifter  *pitch.SpectralPitchShifter
+	scratch  []float64
+	carry    []float64 // overlap carry, len = frameSize - analysisHop
+	carryLen int
 }
 
 func newWsola(sampleRate int, params map[string]any) (Node, error) {
@@ -59,7 +65,15 @@ func newWsola(sampleRate int, params map[string]any) (Node, error) {
 		if err := s.SetFrameSize(frameSize); err != nil {
 			return nil, fmt.Errorf("frameSize: %w", err)
 		}
-		return &wsolaChannel{shifter: s, scratch: make([]float64, 0, frameSize)}, nil
+		// The carry must hold one full analysis hop less than a frame so the
+		// kept region of the next call starts with full steady-state OLA
+		// window coverage (frameSize - hop is a multiple of hop).
+		overlap := frameSize - s.AnalysisHop()
+		return &wsolaChannel{
+			shifter: s,
+			scratch: make([]float64, 0, frameSize),
+			carry:   make([]float64, overlap),
+		}, nil
 	}
 	left, err := build()
 	if err != nil {
@@ -77,22 +91,8 @@ func (n *wsolaNode) ProcessInPlace(buf []float32) error {
 	if frames == 0 {
 		return nil
 	}
-	if len(n.left.scratch) < frames {
-		n.left.scratch = make([]float64, frames)
-	}
-	if len(n.right.scratch) < frames {
-		n.right.scratch = make([]float64, frames)
-	}
-	for i := range frames {
-		n.left.scratch[i] = float64(buf[2*i])
-		n.right.scratch[i] = float64(buf[2*i+1])
-	}
-	outL := n.left.shifter.Process(n.left.scratch[:frames])
-	outR := n.right.shifter.Process(n.right.scratch[:frames])
-	for i := range frames {
-		buf[2*i] = float32(outL[i])
-		buf[2*i+1] = float32(outR[i])
-	}
+	processWsolaChannel(n.left, buf, 0, frames)
+	processWsolaChannel(n.right, buf, 1, frames)
 	return nil
 }
 
@@ -100,4 +100,41 @@ func (n *wsolaNode) Close() error {
 	n.left.shifter.Reset()
 	n.right.shifter.Reset()
 	return nil
+}
+
+// processWsolaChannel feeds one mono channel through the shifter with overlap
+// carry. SpectralPitchShifter.Process is a one-shot STFT: its OLA
+// normalization divides each output sample by the sum of squared window
+// coefficients covering it, and at the head of a fresh call only the first
+// frame covers the first samples, so the norm is ~w[0]^2 ~ 0 and the output
+// blows up (measured ~1.2e4x transient spikes at every 4096-frame chunk
+// boundary). Prepending the previous call's tail (frameSize - hop samples)
+// makes the kept region start with full window coverage, and discarding the
+// overlap region's output keeps the stream continuous across calls. The
+// carry and scratch are preallocated; only SpectralPitchShifter.Process
+// allocates (by contract).
+func processWsolaChannel(c *wsolaChannel, buf []float32, ch, frames int) {
+	callLen := c.carryLen + frames
+	if len(c.scratch) < callLen {
+		c.scratch = make([]float64, callLen)
+	}
+	for i := range c.carryLen {
+		c.scratch[i] = c.carry[i]
+	}
+	for i := range frames {
+		c.scratch[c.carryLen+i] = float64(buf[2*i+ch])
+	}
+	out := c.shifter.Process(c.scratch[:callLen])
+	// Discard the overlap region's output; keep only the new chunk's.
+	for i := range frames {
+		buf[2*i+ch] = float32(out[c.carryLen+i])
+	}
+	// New carry: the last `overlap` input samples of this call.
+	overlap := len(c.carry)
+	newLen := callLen
+	if newLen > overlap {
+		newLen = overlap
+	}
+	copy(c.carry, c.scratch[callLen-newLen:callLen])
+	c.carryLen = newLen
 }

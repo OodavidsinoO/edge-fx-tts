@@ -135,7 +135,7 @@ values below are the shipped defaults.
 | --- | --- | --- |
 | `aifake` | Synthetic-AI feel, intelligibility first (report §3.2 A) | HPF 100 Hz; comp 2:1 / −20 dB; bandpass 300–3400 Hz; chorus 22 ms ×3; FDN RT60 1.0 s wet 0.15 |
 | `doubledelay` | Cinematic double + slapback (report §3.2 B) | HPF 80 Hz; comp 3:1 / −18 dB; chorus 25 ms ×2 wet 0.35; slapback 100 ms, zero feedback; FDN RT60 1.6 s |
-| `scifiatmo` | Sci-fi atmosphere (report §3.2 C) | HPF 80 Hz; comp 4:1 / −16 dB; wide chorus 30 ms ×3; ambient delay 500 ms, FB 0.35; FDN RT60 3.0 s |
+| `scifiatmo` | Sci-fi atmosphere (report §3.2 C) | HPF 80 Hz; comp 4:1 / −16 dB; wide chorus 30 ms ×3; ambient delay 250 ms, FB 0.25; FDN RT60 3.0 s |
 | `filmai` | D1 Ghost-in-the-Shell broadcast AI (report §6.2) | WSOLA −1 st; flanger 0.4 Hz; chorus 25 ms ×3; band 300–3400 Hz; FDN RT60 0.5 s; comp 3.5:1; de-esser |
 | `filmai-d2` | D2 GLaDOS quantized synth | Pitch corrector (chromatic, 0 ms) + formant shift +1.8; then the D1 chain |
 | `filmai-d3` | D3 HAL/TARS calm server voice | WSOLA −2.5 st; gate −45 dB 10:1; comp 4:1 fast attack; FDN RT60 0.6 s; de-esser |
