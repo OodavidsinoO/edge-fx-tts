@@ -17,5 +17,5 @@ var (
 )
 
 const (
-	DefaultVoice = "zh-CN-XiaoxiaoNeural"
+	DefaultVoice = "en-US-EmmaMultilingualNeural"
 )
