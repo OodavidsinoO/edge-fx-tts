@@ -26,9 +26,9 @@ TTS 合成语音（返回 **24 kHz、MPEG-2 Layer 3、单声道** 流），解�
 - **13 效果链** — `upmix`、`eq`、`compressor`、`deesser`、`chorus`、`delay`、
   `fdnreverb`、`limiter`、`formant`（自研倒谱源-滤波器共振峰搬移）、`pitchcorrector`、
   `flanger`、`gate`、`wsola`（保时长的频谱变调）。
-- **12 个内置预设 profile** — filmai ×4（D1–D4 电影 AI 感）、broadcast ×4（E1–E3
-  播音员/电台/电话会议）+ 基座、aifake / doubledelay / scifiatmo（A/B/C 演示预设），
-  另有最小 `placeholder` 占位。
+- **14 个内置预设 profile** — filmai ×4（D1–D4 电影 AI 感）、broadcast ×4（E1–E3
+  播音员/电台/电话会议）、aifake / doubledelay / scifiatmo（A/B/C 演示预设）、
+  jarvis / edith / ai-modern（现代电影 AI 声），外加一个最小 `placeholder` 占位。
 - **流式管线** — 解码 → 效果链 → WAV 三协程流水线，有界 SPSC 环形缓冲 + 天然背压，
   并带尾部尾音，避免混响/延迟衰减被硬切。
 - **完整 CLI 表面** — `--profile`、`--type`、`--text`、`--file`、`--output`、
@@ -126,10 +126,13 @@ edgefx --profile broadcast --voice zh-CN-YunxiNeural --rate +10% --pitch +5Hz --
 | `aifake` | 合成 AI 感，可懂度优先（报告 §3.2 A） | HPF 100 Hz；压缩 2:1 / −20 dB；带通 300–3400 Hz；合唱 22 ms ×3；FDN RT60 1.0 s wet 0.15 |
 | `doubledelay` | 电影双音 + slapback（报告 §3.2 B） | HPF 80 Hz；压缩 3:1 / −18 dB；合唱 25 ms ×2 wet 0.35；slapback 100 ms、零反馈；FDN RT60 1.6 s |
 | `scifiatmo` | 科幻氛围（报告 §3.2 C） | HPF 80 Hz；压缩 4:1 / −16 dB；宽合唱 30 ms ×3；环境延迟 250 ms、FB 0.25；FDN RT60 3.0 s |
-| `filmai` | D1 攻壳广播 AI 腔（报告 §6.2） | WSOLA −1 st；flanger 0.4 Hz；合唱 25 ms ×3；带通 300–3400 Hz；FDN RT60 0.5 s；压缩 3.5:1；de-esser |
-| `filmai-d2` | D2 GLaDOS 量化合成 | 音高校正（chromatic、0 ms）+ formant 上移 +1.8；其后同 D1 链路 |
-| `filmai-d3` | D3 HAL/TARS 冷静服务器嗓 | WSOLA −2.5 st；噪声门 −45 dB 10:1；压缩 4:1 快起音；FDN RT60 0.6 s；de-esser |
+| `filmai` | D1 现代电影 AI（JARVIS 式近场） | WSOLA −1 st；轻合唱 20 ms ×2 / 10%；HPF 100 Hz；presence 3 kHz +1.5 dB；FDN RT60 0.2 s wet 0.1；压缩 2.5:1；de-esser |
+| `filmai-d2` | D2 现代 AI 带轻微机械感 | 轻音高校正（chromatic、amount 0.3 / 200 ms / block 8192）+ formant 上移 1.2；其后同 D1 链路 |
+| `filmai-d3` | D3 HAL/TARS 冷静服务器嗓 | WSOLA −2.5 st；噪声门 −45 dB 10:1；压缩 4:1 快起音；FDN RT60 0.25 s wet 0.1；de-esser |
 | `filmai-d4` | D4 微距 OS，近讲微调 | 100 Hz +1.5 dB；3 kHz +2.5 dB；轻压缩 1.5:1；FDN RT60 0.2 s wet 0.15 |
+| `jarvis` | 现代电影 AI，自然近场（JARVIS 式） | WSOLA −1 st；轻合唱 20 ms ×2 / 10%；HPF 100 Hz；presence 3 kHz +1.5 dB；FDN RT60 0.2 s wet 0.1；压缩 2.5:1；de-esser |
+| `edith` | 现代电影 AI，更冷/更数字（EDITH 式） | jarvis + formant 上移 1.15；presence 3 kHz +2.5 dB；FDN RT60 0.2 s wet 0.08 |
+| `ai-modern` | 现代电影 AI 带轻微机械感 | jarvis + formant 上移 1.2 + 轻音高校正（amount 0.3 / 200 ms / block 8192） |
 | `broadcast` / `broadcast-e1` | E1 播音员（报告 §6.3） | 广播 EQ 曲线（HP 85 Hz、+1.5 @250 Hz、−1.5 @800 Hz Q4、+2.5 @3 kHz、+1.5 @5.5 kHz、LP 7 kHz、−1.5 @7 kHz Q4）；de-esser；压缩 3:1；FDN RT60 0.25 s |
 | `broadcast-e2` | E2 电台/DJ，更密 | 同 EQ 且 250 Hz 为 +3 dB；压缩 5:1 快；FDN RT60 0.25 s |
 | `broadcast-e3` | E3 电话会议 | 带通 300–3400 Hz；+1 dB @1 kHz；压缩 5:1 极快起音 |

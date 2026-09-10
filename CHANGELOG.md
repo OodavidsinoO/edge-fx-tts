@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.5.1 - 2026-09-10
+
+### Changed
+- Modernized the film-AI preset family. The previous chains (narrowband
+  300–3400 Hz, flanger, long reverb, hard pitch quantization) read as a
+  80s/90s telephone AI; the new chains follow the modern film-AI recipe
+  (full-band ~100 Hz–8 kHz, near-field dry reverb, light modulation, subtle
+  pitch/formant) per the feasibility report and sound-design research.
+  - `filmai` (D1) → JARVIS-style natural near-field chain.
+  - `filmai-d2` (D2) → light mechanical edge (formant 1.2 + light pitch
+    corrector amount 0.3 / 200 ms / block 8192).
+  - `filmai-d3` (D3) → modern calm (dropped flanger/narrowband, kept gate +
+    strong compression).
+  - `filmai-d4` (D4) unchanged (already near-field/wide-band).
+
+### Added
+- `jarvis` / `edith` / `ai-modern` preset profiles (modern film-AI voices).
+- `demo/generate.sh`: one-shot synthesis of all 14 profiles to `demo/*.wav`
+  (outputs gitignored; script committed).
+
 ## v0.5.0 - 2026-09-10
 
 This release is a fork of `lib-x/edgetts` (`v0.4.0`) turned into a
