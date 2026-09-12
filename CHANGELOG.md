@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.5.3 - 2026-09-12
+
+### Fixed
+- Audible "pop/crackle" in the wsola node on real speech. The stock
+  algo-dsp `SpectralPitchShifter` calls `Reset()` (zeroing phase-vocoder
+  state) at the top of every `Process` call, so streaming audio through the
+  wsola node in 4096-sample chunks restarted phase tracking at every seam
+  and emitted a transient 0.34–0.62 full-scale click (~265 in a 10 s clip;
+  user heard a repeating "pop" in jarvis/edith). We forked the shifter to
+  `internal/pitchshift`, removing the implicit reset so phase state survives
+  across chunks; the public `Reset()` is retained. Measured: jarvis clicks
+  265 → 0, edith 529 → 0 (the residual few in edith trace to source transients
+  amplified by formant, not wsola). Added `TestWsolaStreamClickFree` which
+  fails on the stock shifter (9 clicks) and passes on the fork (0).
+- `go.mod`/`go.sum`: none changed — the fork imports the same algo-dsp /
+  algo-fft deps already used by the repository.
+
 ## v0.5.2 - 2026-09-12
 
 ### Fixed

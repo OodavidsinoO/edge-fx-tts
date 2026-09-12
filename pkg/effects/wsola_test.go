@@ -1,8 +1,13 @@
 package effects
 
 import (
+	"io"
 	"math"
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/OodavidsinoO/edge-fx-tts/internal/decode"
 )
 
 // The wsola node necessarily allocates on every ProcessInPlace call:
@@ -161,6 +166,95 @@ func TestWsolaChunkContinuity(t *testing.T) {
 	if md > maxDiff {
 		t.Fatalf("chunked vs one-shot maxdiff %.4f at frame %d, want <= %.1f (chunk seams must not spike)",
 			md, mi, maxDiff)
+	}
+}
+
+// TestWsolaStreamClickFree guards against the per-call phase reset that
+// produced audible pops on real audio. The stock algo-dsp
+// SpectralPitchShifter calls Reset() (zeroing prevPhase/sumPhase) at the top
+// of every Process call, so a streamed-in-chunks signal restarts its
+// phase-vocoder state at each chunk seam and emits a transient pop there (we
+// measured 265 pops in a 10s clip). The fork keeps phase state live across
+// Process calls. Single-tone sines are phase-coherent enough to mask this,
+// so we drive the real offline fixture (internal/decode/testdata/sample.mp3)
+// and assert the chunked stream stays click-free: no adjacent-sample jump
+// above a fraction of full scale that the one-shot pass also stays under.
+func TestWsolaStreamClickFree(t *testing.T) {
+	const (
+		chunk  = 4096
+		maxAbs = 0.30 // clicks seen pre-fix were 0.34-0.62 full scale
+	)
+	// Decode the offline fixture via the package-under-test's streamed
+	// decoder (same code path the CLI uses).
+	f, err := os.Open(filepath.Join("..", "..", "internal", "decode", "testdata", "sample.mp3"))
+	if err != nil {
+		t.Fatalf("open fixture: %v", err)
+	}
+	defer f.Close()
+	dec, err := decode.NewMinimp3Decoder(f)
+	if err != nil {
+		t.Fatalf("decoder: %v", err)
+	}
+	var mono []float32
+	b := make([]float32, 4096)
+	for {
+		n, err := dec.Read(b)
+		mono = append(mono, b[:n]...)
+		if err == io.EOF || err != nil {
+			break
+		}
+	}
+
+	oneshot := buildNode(t, "wsola", map[string]any{"semitones": -1, "frameSize": 2048})
+	buf := stereoFrames(len(mono))
+	for j, v := range mono {
+		buf[2*j] = v
+	}
+	if err := oneshot.ProcessInPlace(buf); err != nil {
+		t.Fatalf("one-shot process: %v", err)
+	}
+
+	chunked := buildNode(t, "wsola", map[string]any{"semitones": -1, "frameSize": 2048})
+	got := make([]float32, len(mono))
+	for off := 0; off < len(mono); off += chunk {
+		sz := chunk
+		if off+sz > len(mono) {
+			sz = len(mono) - off
+		}
+		cb := stereoFrames(sz)
+		for j := range sz {
+			cb[2*j] = mono[off+j]
+		}
+		if err := chunked.ProcessInPlace(cb); err != nil {
+			t.Fatalf("chunked process at %d: %v", off, err)
+		}
+		for j := range sz {
+			got[off+j] = cb[2*j]
+		}
+	}
+
+	// A phase-reset click is a step discontinuity far exceeding full scale;
+	// it shows up in the chunked stream but not the one-shot reference.
+	// Count adjacent-sample jumps above maxAbs in each.
+	oneshotClicks := 0
+	for i := 1; i < len(mono); i++ {
+		s := math.Abs(float64(buf[2*i]) - float64(buf[2*(i-1)]))
+		if s > maxAbs {
+			oneshotClicks++
+		}
+	}
+	chunkedClicks := 0
+	for i := 1; i < len(mono); i++ {
+		s := math.Abs(float64(got[i]) - float64(got[i-1]))
+		if s > maxAbs {
+			chunkedClicks++
+		}
+	}
+	// Allow a couple of source transients the one-shot shares; the pre-fix
+	// chunked path produced dozens of seam clicks the one-shot did not.
+	if chunkedClicks > oneshotClicks+3 {
+		t.Fatalf("chunked stream click count %d > one-shot %d + 3: phase reset at chunk seams",
+			chunkedClicks, oneshotClicks)
 	}
 }
 

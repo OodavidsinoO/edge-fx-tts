@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	pitch "github.com/cwbudde/algo-dsp/dsp/effects/pitch"
+	pitch "github.com/OodavidsinoO/edge-fx-tts/internal/pitchshift"
 )
 
 func init() {
