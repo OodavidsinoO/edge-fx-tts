@@ -130,7 +130,7 @@ edgefx --profile broadcast --voice zh-CN-YunxiNeural --rate +10% --pitch +5Hz --
 | `filmai-d4` | D4 微距 OS，近讲微调 | 100 Hz +1.5 dB；3 kHz +2.5 dB；LPF 7.5 kHz；de-esser（6.5 kHz / −28 dB）；轻压缩 1.5:1；FDN RT60 0.2 s wet 0.15 |
 | `jarvis` | 现代电影 AI，自然近场（JARVIS 式） | WSOLA −1 st；轻合唱 20 ms ×2 / 10%；HPF 100 Hz；presence 3 kHz +1.5 dB；LPF 7 kHz；FDN RT60 0.2 s wet 0.1；压缩 2.5:1；宽带 de-esser（7 kHz / −28 dB）+ LPF 7 kHz |
 | `edith` | 现代电影 AI，更冷/更数字（EDITH 式） | jarvis + formant 上移 1.15；presence 3 kHz +2.0 dB；FDN RT60 0.2 s wet 0.08 |
-| `ai-modern` | 现代电影 AI 带轻微机械感 | jarvis + formant 上移 1.2 + 轻音高校正（amount 0.3 / 200 ms / block 4096） |
+| `ai-modern` | 现代电影 AI 带轻微机械感 | jarvis + formant 上移 1.2 + 轻音高校正（amount 0.3 / 200 ms / block 8192） |
 | `broadcast` | E1 播音员（报告 §6.3） | 广播 EQ 曲线（HP 85 Hz、+1.5 @250 Hz、−1.5 @800 Hz Q4、+2.5 @3 kHz、+1.5 @5.5 kHz、LP 7 kHz、−1.5 @7 kHz Q4）；de-esser（6.2 kHz / −22 dB）；压缩 3:1；FDN RT60 0.25 s |
 | `broadcast-e2` | E2 电台/DJ，更密 | 同 EQ 且 250 Hz 为 +3 dB；de-esser（6.2 kHz / −22 dB）；压缩 5:1 快；FDN RT60 0.25 s |
 | `broadcast-e3` | E3 电话会议 | 带通 300–3400 Hz；+1 dB @1 kHz；压缩 5:1 极快起音 |

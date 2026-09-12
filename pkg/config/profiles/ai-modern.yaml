@@ -6,7 +6,7 @@ stages:
   - name: upmix
     params: { mode: center }
   - name: pitchcorrector
-    params: { mode: chromatic, amount: 0.3, speedMs: 200, blockSize: 4096 }
+    params: { mode: chromatic, amount: 0.3, speedMs: 200, blockSize: 8192 }
   - name: formant
     params: { shift: 1.2 }
   - name: wsola

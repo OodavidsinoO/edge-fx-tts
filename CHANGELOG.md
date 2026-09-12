@@ -17,8 +17,10 @@ All notable changes to this project will be documented in this file.
   default 6 kHz de-esser ignored.
   - `jarvis`: +cascaded LP 7 kHz after de-esser; de-esser 7 kHz / −28 dB.
   - `edith`: same as jarvis; presence 3 kHz gain 2.5 → 2.0.
-  - `ai-modern`: same as jarvis; pitchcorrector blockSize 8192 → 4096
-    (shorter 341 ms block latency, no 2-chunk seam).
+  - `ai-modern`: same as jarvis; pitchcorrector blockSize stays 8192.
+    A 8192 → 4096 trial was reverted after it doubled the correction seam
+    rate and raised block-boundary clicks (deterministic tone test:
+    4096 ⇒ 117, 8192 ⇒ 87).
   - `filmai-d3`: same de-esser / cascaded LP treatment.
   - `filmai-d4`: LP 7.5 kHz (softer than the family 7 kHz) + de-esser
     6.5 kHz / −28 dB before the FDN — keeps the "barely processed" role.
