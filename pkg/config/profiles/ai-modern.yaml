@@ -18,7 +18,7 @@ stages:
   - name: eq
     params: { type: peaking, freq: 3000, gain: 1.5, q: 0.8 }
   - name: eq
-    params: { type: lowpass, freq: 8500, q: 0.707 }
+    params: { type: lowpass, freq: 7000, q: 0.707 }
   - name: fdnreverb
     params: { rt60: 0.2, damp: 0.6, preDelay: 0.02, wet: 0.1, dry: 1.0 }
   - name: compressor

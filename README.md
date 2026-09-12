@@ -137,12 +137,12 @@ values below are the shipped defaults.
 | `aifake` | Synthetic-AI feel, intelligibility first (report §3.2 A) | HPF 100 Hz; comp 2:1 / −20 dB; bandpass 300–3400 Hz; chorus 22 ms ×3; FDN RT60 1.0 s wet 0.15 |
 | `doubledelay` | Cinematic double + slapback (report §3.2 B) | HPF 80 Hz; comp 3:1 / −18 dB; chorus 25 ms ×2 wet 0.35; slapback 100 ms, zero feedback; FDN RT60 1.6 s |
 | `scifiatmo` | Sci-fi atmosphere (report §3.2 C) | HPF 80 Hz; comp 4:1 / −16 dB; wide chorus 30 ms ×3; ambient delay 250 ms, FB 0.25; FDN RT60 3.0 s |
-| `filmai` | D1 modern film-AI (JARVIS-style, near-field) | WSOLA −1 st; light chorus 20 ms ×2 / 10%; HPF 100 Hz; presence 3 kHz +1.5 dB; LPF 8.5 kHz; FDN RT60 0.2 s wet 0.1; comp 2.5:1; de-esser |
+| `filmai` | D1 modern film-AI (JARVIS-style, near-field) | WSOLA −1 st; light chorus 20 ms ×2 / 10%; HPF 100 Hz; presence 3 kHz +1.5 dB; LPF 7 kHz; FDN RT60 0.2 s wet 0.1; comp 2.5:1; de-esser |
 | `filmai-d2` | D2 modern AI with a light mechanical edge | Light pitch corrector (chromatic, amount 0.3 / 200 ms / block 8192) + formant shift 1.2; then the D1 chain |
-| `filmai-d3` | D3 HAL/TARS calm server voice | WSOLA −2.5 st; gate −45 dB 10:1; LPF 8.5 kHz; comp 4:1 fast attack; FDN RT60 0.25 s wet 0.1; de-esser |
+| `filmai-d3` | D3 HAL/TARS calm server voice | WSOLA −2.5 st; gate −45 dB 10:1; LPF 7 kHz; comp 4:1 fast attack; FDN RT60 0.25 s wet 0.1; de-esser |
 | `filmai-d4` | D4 micro-OS, close-mic, barely processed | 100 Hz +1.5 dB; 3 kHz +2.5 dB; gentle comp 1.5:1; FDN RT60 0.2 s wet 0.15 |
-| `jarvis` | Modern film-AI, natural near-field (JARVIS-style) | WSOLA −1 st; light chorus 20 ms ×2 / 10%; HPF 100 Hz; presence 3 kHz +1.5 dB; LPF 8.5 kHz; FDN RT60 0.2 s wet 0.1; comp 2.5:1; de-esser |
-| `edith` | Modern film-AI, cooler/digital (EDITH-style) | jarvis + formant shift 1.15; presence 3 kHz +2.5 dB; LPF 8.5 kHz; FDN RT60 0.2 s wet 0.08 |
+| `jarvis` | Modern film-AI, natural near-field (JARVIS-style) | WSOLA −1 st; light chorus 20 ms ×2 / 10%; HPF 100 Hz; presence 3 kHz +1.5 dB; LPF 7 kHz; FDN RT60 0.2 s wet 0.1; comp 2.5:1; de-esser |
+| `edith` | Modern film-AI, cooler/digital (EDITH-style) | jarvis + formant shift 1.15; presence 3 kHz +2.5 dB; LPF 7 kHz; FDN RT60 0.2 s wet 0.08 |
 | `ai-modern` | Modern film-AI with a light mechanical edge | jarvis + formant shift 1.2 + light pitch corrector (amount 0.3 / 200 ms / block 8192) |
 | `broadcast` / `broadcast-e1` | E1 announcer (report §6.3) | Broadcast EQ curve (HP 85 Hz, +1.5 @250 Hz, −1.5 @800 Hz Q4, +2.5 @3 kHz, +1.5 @5.5 kHz, LP 7 kHz, −1.5 @7 kHz Q4); de-esser; comp 3:1; FDN RT60 0.25 s |
 | `broadcast-e2` | E2 radio/DJ, denser | Same EQ with +3 dB @250 Hz; comp 5:1 fast; FDN RT60 0.25 s |
