@@ -22,7 +22,9 @@ stages:
   - name: fdnreverb
     params: { rt60: 0.25, damp: 0.6, preDelay: 0.02, wet: 0.1, dry: 1.0 }
   - name: deesser
-    params: {}
+    params: { frequency: 7000, q: 1.5, threshold: -28, ratio: 2.5 }
+  - name: eq
+    params: { type: lowpass, freq: 7000, q: 0.707 }
   - name: limiter
     params: { threshold: -1, release: 100 }
 output:

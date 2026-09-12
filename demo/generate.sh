@@ -17,12 +17,9 @@ PROFILES=(
   aifake
   doubledelay
   scifiatmo
-  filmai
-  filmai-d2
   filmai-d3
   filmai-d4
   broadcast
-  broadcast-e1
   broadcast-e2
   broadcast-e3
   jarvis

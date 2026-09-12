@@ -20,7 +20,7 @@ stages:
   - name: eq
     params: { type: peaking, freq: 7000, gain: -1.5, q: 4 }
   - name: deesser
-    params: {}
+    params: { frequency: 6200, threshold: -22, ratio: 2.5 }
   - name: compressor
     params: { threshold: -24, ratio: 5, attack: 8, release: 100 }
   - name: fdnreverb

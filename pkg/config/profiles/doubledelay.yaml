@@ -13,6 +13,10 @@ stages:
     params: { baseDelay: 0.025, depth: 0.0015, speedHz: 0.15, stages: 2, mix: 0.35 }
   - name: delay
     params: { time: 0.1, feedback: 0, mix: 0.3 }
+  - name: eq
+    params: { type: lowpass, freq: 7000, q: 0.707 }
+  - name: deesser
+    params: { frequency: 7000, threshold: -28, ratio: 2.5 }
   - name: fdnreverb
     params: { rt60: 1.6, damp: 0.35, preDelay: 0.018, wet: 0.2, dry: 1.0 }
   - name: limiter

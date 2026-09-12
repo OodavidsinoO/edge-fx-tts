@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.5.5 - 2026-09-12
+
+### Changed
+- Profile-tier deduplication: the `filmai` / `filmai-d2` / `broadcast-e1`
+  profiles were duplicate aliases with chains byte-identical to `jarvis` /
+  `ai-modern` / `broadcast` (`broadcast-e1` differed only by a comment
+  header) and are removed — 14 built-in profiles → 11 (plus the
+  `placeholder` stub). Use the canonical names.
+- Noise governance across all tuned profiles: a second cascaded 7 kHz
+  lowpass (q 0.707) after the de-esser, together with a widened de-esser
+  (center 7 kHz, Q 1.5, threshold −28 dB, ratio 2.5), attacks the source's
+  3 kHz+ encoding hiss the single 2nd-order LP left (-6 dB @9 kHz) and the
+  default 6 kHz de-esser ignored.
+  - `jarvis`: +cascaded LP 7 kHz after de-esser; de-esser 7 kHz / −28 dB.
+  - `edith`: same as jarvis; presence 3 kHz gain 2.5 → 2.0.
+  - `ai-modern`: same as jarvis; pitchcorrector blockSize 8192 → 4096
+    (shorter 341 ms block latency, no 2-chunk seam).
+  - `filmai-d3`: same de-esser / cascaded LP treatment.
+  - `filmai-d4`: LP 7.5 kHz (softer than the family 7 kHz) + de-esser
+    6.5 kHz / −28 dB before the FDN — keeps the "barely processed" role.
+  - `doubledelay` / `scifiatmo`: LP 7 kHz + wideband de-esser before the
+    reverb so the long tails (1.6 s / 3.0 s) do not drag out the hiss;
+    `scifiatmo` FDN damp 0.22 → 0.38 (darker tail, −4~−6 dB hiss).
+  - `broadcast` / `broadcast-e2`: de-esser retuned to 6.2 kHz / −22 dB
+    (subtle, −1~−2 dB) for the E curve; `broadcast-e3` / `aifake` /
+    `placeholder` unchanged (already narrowband/optimal / stub).
+
 ## v0.5.4 - 2026-09-12
 
 ### Fixed

@@ -12,8 +12,8 @@ import (
 func TestPresetProfilesBuild(t *testing.T) {
 	presets := []string{
 		"aifake", "doubledelay", "scifiatmo",
-		"filmai", "filmai-d2", "filmai-d3", "filmai-d4",
-		"broadcast", "broadcast-e1", "broadcast-e2", "broadcast-e3",
+		"filmai-d3", "filmai-d4",
+		"broadcast", "broadcast-e2", "broadcast-e3",
 		"jarvis", "edith", "ai-modern",
 	}
 	for _, name := range presets {

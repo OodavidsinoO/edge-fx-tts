@@ -14,7 +14,7 @@ stages:
   - name: eq
     params: { type: highpass, freq: 100, q: 0.707 }
   - name: eq
-    params: { type: peaking, freq: 3000, gain: 2.5, q: 0.8 }
+    params: { type: peaking, freq: 3000, gain: 2.0, q: 0.8 }
   - name: eq
     params: { type: lowpass, freq: 7000, q: 0.707 }
   - name: fdnreverb
@@ -22,7 +22,9 @@ stages:
   - name: compressor
     params: { threshold: -22, ratio: 2.5, attack: 15, release: 120 }
   - name: deesser
-    params: {}
+    params: { frequency: 7000, q: 1.5, threshold: -28, ratio: 2.5 }
+  - name: eq
+    params: { type: lowpass, freq: 7000, q: 0.707 }
   - name: limiter
     params: { threshold: -1, release: 100 }
 output:

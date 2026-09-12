@@ -20,7 +20,9 @@ stages:
   - name: compressor
     params: { threshold: -22, ratio: 2.5, attack: 15, release: 120 }
   - name: deesser
-    params: {}
+    params: { frequency: 7000, q: 1.5, threshold: -28, ratio: 2.5 }
+  - name: eq
+    params: { type: lowpass, freq: 7000, q: 0.707 }
   - name: limiter
     params: { threshold: -1, release: 100 }
 output:

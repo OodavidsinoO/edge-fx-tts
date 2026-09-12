@@ -52,11 +52,11 @@ func run(args []string) error {
 
 	// Step 2 — load and freeze a preset profile.
 	//
-	// config.LoadProfile resolves "filmai-d2" into an immutable ChainSpec:
+	// config.LoadProfile resolves "ai-modern" into an immutable ChainSpec:
 	// sample rate, channels, chunk size and the ordered (validated) stage
 	// list. The empty overrideDir means the embedded profile is used; pass a
 	// directory to override presets with external YAML files of the same name.
-	spec, err := config.LoadProfile("filmai-d2", "")
+	spec, err := config.LoadProfile("ai-modern", "")
 	if err != nil {
 		return fmt.Errorf("load profile: %w", err)
 	}
@@ -71,7 +71,7 @@ func run(args []string) error {
 		return fmt.Errorf("build chain: %w", err)
 	}
 	fmt.Printf("resolved chain for %q (%d Hz, %d ch, %d chunk samples):\n",
-		"filmai-d2", spec.SampleRate, spec.Channels, spec.ChunkSamples)
+		"ai-modern", spec.SampleRate, spec.Channels, spec.ChunkSamples)
 	for _, st := range spec.Stages {
 		fmt.Printf("  - %-15s %v\n", st.Name, st.Params)
 	}

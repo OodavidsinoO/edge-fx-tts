@@ -26,8 +26,8 @@ TTS 合成语音（返回 **24 kHz、MPEG-2 Layer 3、单声道** 流），解�
 - **13 效果链** — `upmix`、`eq`、`compressor`、`deesser`、`chorus`、`delay`、
   `fdnreverb`、`limiter`、`formant`（自研倒谱源-滤波器共振峰搬移）、`pitchcorrector`、
   `flanger`、`gate`、`wsola`（保时长的频谱变调）。
-- **14 个内置预设 profile** — filmai ×4（D1–D4 电影 AI 感）、broadcast ×4（E1–E3
-  播音员/电台/电话会议）、aifake / doubledelay / scifiatmo（A/B/C 演示预设）、
+- **11 个内置预设 profile** — filmai ×2（D3–D4 电影 AI 感）、broadcast ×3
+  （播音员/电台/电话会议）、aifake / doubledelay / scifiatmo（A/B/C 演示预设）、
   jarvis / edith / ai-modern（现代电影 AI 声），外加一个最小 `placeholder` 占位。
 - **流式管线** — 解码 → 效果链 → WAV 三协程流水线，有界 SPSC 环形缓冲 + 天然背压，
   并带尾部尾音，避免混响/延迟衰减被硬切。
@@ -96,13 +96,13 @@ edgefx --type ssml --text '<speak version="1.0" xmlns="http://www.w3.org/2001/10
 效果预设转 WAV：
 
 ```bash
-edgefx --profile filmai-d2 --text "Hello from the machine." --output out.wav
+edgefx --profile jarvis --text "Hello from the machine." --output out.wav
 ```
 
 效果预设转 MP3（需要 ffmpeg）：
 
 ```bash
-edgefx --profile filmai --text "Hello again." --format mp3 --output out.mp3
+edgefx --profile ai-modern --text "Hello again." --format mp3 --output out.mp3
 ```
 
 从文件读取输入：
@@ -124,22 +124,22 @@ edgefx --profile broadcast --voice zh-CN-YunxiNeural --rate +10% --pitch +5Hz --
 | Profile | 风格 | 关键链路 |
 | --- | --- | --- |
 | `aifake` | 合成 AI 感，可懂度优先（报告 §3.2 A） | HPF 100 Hz；压缩 2:1 / −20 dB；带通 300–3400 Hz；合唱 22 ms ×3；FDN RT60 1.0 s wet 0.15 |
-| `doubledelay` | 电影双音 + slapback（报告 §3.2 B） | HPF 80 Hz；压缩 3:1 / −18 dB；合唱 25 ms ×2 wet 0.35；slapback 100 ms、零反馈；FDN RT60 1.6 s |
-| `scifiatmo` | 科幻氛围（报告 §3.2 C） | HPF 80 Hz；压缩 4:1 / −16 dB；宽合唱 30 ms ×3；环境延迟 250 ms、FB 0.25；FDN RT60 3.0 s |
-| `filmai` | D1 现代电影 AI（JARVIS 式近场） | WSOLA −1 st；轻合唱 20 ms ×2 / 10%；HPF 100 Hz；presence 3 kHz +1.5 dB；LPF 7 kHz；FDN RT60 0.2 s wet 0.1；压缩 2.5:1；de-esser |
-| `filmai-d2` | D2 现代 AI 带轻微机械感 | 轻音高校正（chromatic、amount 0.3 / 200 ms / block 8192）+ formant 上移 1.2；其后同 D1 链路 |
-| `filmai-d3` | D3 HAL/TARS 冷静服务器嗓 | WSOLA −2.5 st；噪声门 −45 dB 10:1；LPF 7 kHz；压缩 4:1 快起音；FDN RT60 0.25 s wet 0.1；de-esser |
-| `filmai-d4` | D4 微距 OS，近讲微调 | 100 Hz +1.5 dB；3 kHz +2.5 dB；轻压缩 1.5:1；FDN RT60 0.2 s wet 0.15 |
-| `jarvis` | 现代电影 AI，自然近场（JARVIS 式） | WSOLA −1 st；轻合唱 20 ms ×2 / 10%；HPF 100 Hz；presence 3 kHz +1.5 dB；LPF 7 kHz；FDN RT60 0.2 s wet 0.1；压缩 2.5:1；de-esser |
-| `edith` | 现代电影 AI，更冷/更数字（EDITH 式） | jarvis + formant 上移 1.15；presence 3 kHz +2.5 dB；LPF 7 kHz；FDN RT60 0.2 s wet 0.08 |
-| `ai-modern` | 现代电影 AI 带轻微机械感 | jarvis + formant 上移 1.2 + 轻音高校正（amount 0.3 / 200 ms / block 8192） |
-| `broadcast` / `broadcast-e1` | E1 播音员（报告 §6.3） | 广播 EQ 曲线（HP 85 Hz、+1.5 @250 Hz、−1.5 @800 Hz Q4、+2.5 @3 kHz、+1.5 @5.5 kHz、LP 7 kHz、−1.5 @7 kHz Q4）；de-esser；压缩 3:1；FDN RT60 0.25 s |
-| `broadcast-e2` | E2 电台/DJ，更密 | 同 EQ 且 250 Hz 为 +3 dB；压缩 5:1 快；FDN RT60 0.25 s |
+| `doubledelay` | 电影双音 + slapback（报告 §3.2 B） | HPF 80 Hz；压缩 3:1 / −18 dB；合唱 25 ms ×2 wet 0.35；slapback 100 ms、零反馈；LPF 7 kHz + 宽带 de-esser（7 kHz / −28 dB）；FDN RT60 1.6 s |
+| `scifiatmo` | 科幻氛围（报告 §3.2 C） | HPF 80 Hz；压缩 4:1 / −16 dB；宽合唱 30 ms ×3；环境延迟 250 ms、FB 0.25；LPF 7 kHz + 宽带 de-esser（7 kHz / −28 dB）；FDN RT60 3.0 s damp 0.38 |
+| `filmai-d3` | D3 HAL/TARS 冷静服务器嗓 | WSOLA −2.5 st；噪声门 −45 dB 10:1；LPF 7 kHz；压缩 4:1 快起音；FDN RT60 0.25 s wet 0.1；宽带 de-esser（7 kHz / −28 dB）+ LPF 7 kHz |
+| `filmai-d4` | D4 微距 OS，近讲微调 | 100 Hz +1.5 dB；3 kHz +2.5 dB；LPF 7.5 kHz；de-esser（6.5 kHz / −28 dB）；轻压缩 1.5:1；FDN RT60 0.2 s wet 0.15 |
+| `jarvis` | 现代电影 AI，自然近场（JARVIS 式） | WSOLA −1 st；轻合唱 20 ms ×2 / 10%；HPF 100 Hz；presence 3 kHz +1.5 dB；LPF 7 kHz；FDN RT60 0.2 s wet 0.1；压缩 2.5:1；宽带 de-esser（7 kHz / −28 dB）+ LPF 7 kHz |
+| `edith` | 现代电影 AI，更冷/更数字（EDITH 式） | jarvis + formant 上移 1.15；presence 3 kHz +2.0 dB；FDN RT60 0.2 s wet 0.08 |
+| `ai-modern` | 现代电影 AI 带轻微机械感 | jarvis + formant 上移 1.2 + 轻音高校正（amount 0.3 / 200 ms / block 4096） |
+| `broadcast` | E1 播音员（报告 §6.3） | 广播 EQ 曲线（HP 85 Hz、+1.5 @250 Hz、−1.5 @800 Hz Q4、+2.5 @3 kHz、+1.5 @5.5 kHz、LP 7 kHz、−1.5 @7 kHz Q4）；de-esser（6.2 kHz / −22 dB）；压缩 3:1；FDN RT60 0.25 s |
+| `broadcast-e2` | E2 电台/DJ，更密 | 同 EQ 且 250 Hz 为 +3 dB；de-esser（6.2 kHz / −22 dB）；压缩 5:1 快；FDN RT60 0.25 s |
 | `broadcast-e3` | E3 电话会议 | 带通 300–3400 Hz；+1 dB @1 kHz；压缩 5:1 极快起音 |
 
 说明：
 
-- `filmai` 即 D1 基座链路（全开处理）；`broadcast` 与 `broadcast-e1` 链路相同。
+- 被删除的 `filmai` / `filmai-d2` / `broadcast-e1` 是 `jarvis` / `ai-modern` /
+  `broadcast` 的重复别名（链路逐字节相同，`broadcast-e1` 仅差一个注释头）；
+  自 v0.5.5 起请使用规范名。
 - 广播家族按可行性报告 §6.3 实现；EBU R128 **−23 LUFS** 交付定标**未**写入
   profile——广播交付前需离线测量/增益级（报告 §6.4）。
 - `placeholder` 是最小保留占位（upmix + limiter），不是生产风格。
@@ -176,7 +176,7 @@ func main() {
 	defer stream.Close()
 
 	// 2. 加载预设效果链（可另传外部覆盖目录）。
-	spec, err := config.LoadProfile("filmai-d2", "")
+	spec, err := config.LoadProfile("ai-modern", "")
 	if err != nil {
 		panic(err)
 	}
