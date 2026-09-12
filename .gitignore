@@ -25,4 +25,4 @@ go.work
 
 # demo/ generated audio (keep demo/generate.sh committed)
 demo/*.wav
-demo/*.mp3
+demo/*.mp3monolithic
