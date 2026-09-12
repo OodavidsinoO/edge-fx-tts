@@ -9,8 +9,8 @@ All notable changes to this project will be documented in this file.
   after the wsola phase fix. The 8.5 kHz lowpass had largely masked the
   source's high-frequency transients, but user still heard "a little" pop.
   Lowering the lowpass from 8.5 kHz to 7 kHz removes the 7–8.5 kHz source
-  transients that the full-band chain exposed: jarvis >4k-LSB jumps 110 → 1,
-  edith 80 → 2, while the 3 kHz presence and ≤6 kHz speech band are
+  transients that the full-band chain exposed: jarvis >4k-LSB jumps 110 → 5
+  (>8k → 0), edith 80 → 4, while the 3 kHz presence and ≤6 kHz speech band are
   unchanged (band 3400–6000 stayed ~79 dB). Applied to jarvis/edith/
   ai-modern/filmai/filmai-d2/filmai-d3.
 
