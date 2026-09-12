@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## v0.5.2 - 2026-09-12
+
+### Fixed
+- High-frequency noise in the modern film-AI profiles (jarvis/edith,
+  ai-modern) and the modernized filmai family. User reported audible hiss.
+  Diagnosis: Edge TTS source carries high-frequency artifacts (8–12 kHz)
+  that the full-band chain (HPF 100 Hz, no LPF) let through — aifake masked
+  them with its 3.4 kHz bandpass. Fixed by adding a gentle 8.5 kHz lowpass
+  (q 0.707) after the 3 kHz presence stage in jarvis/edith/ai-modern,
+  filmai/filmai-d2/filmai-d3. Spectral measurement: jarvis 9–12 kHz band
+  79.0→71.5 dB, edith 83.7→73.7 dB, hiss floor down ~10 dB, speech ≤6 kHz
+  unchanged.
+
 ## v0.5.1 - 2026-09-10
 
 ### Changed
