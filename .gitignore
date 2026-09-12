@@ -25,4 +25,7 @@ go.work
 
 # demo/ generated audio (keep demo/generate.sh committed)
 demo/*.wav
-demo/*.mp3monolithic
+demo/*.mp3
+
+# stray build artifacts
+/monolithic
